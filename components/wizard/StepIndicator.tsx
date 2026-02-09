@@ -1,10 +1,18 @@
 "use client";
 
+import { evaluateOperationState } from "@/lib/operation";
 import { WIZARD_STEPS } from "@/lib/constants";
 import { useWizardStore } from "@/stores/wizardStore";
 
 export function StepIndicator() {
   const currentStep = useWizardStore((state) => state.step);
+  const goToStep = useWizardStore((state) => state.goToStep);
+  const operationSubstep = useWizardStore((state) => state.operationSubstep);
+  const modifications = useWizardStore((state) => state.modifications);
+  const shiftLeft = useWizardStore((state) => state.shiftLeft);
+  const shiftRight = useWizardStore((state) => state.shiftRight);
+
+  const opState = evaluateOperationState(modifications, shiftLeft, shiftRight);
 
   return (
     <div className="surface-panel rounded-3xl p-4">
@@ -15,15 +23,25 @@ export function StepIndicator() {
         {WIZARD_STEPS.map((label, index) => {
           const isCurrent = currentStep === index;
           const isComplete = currentStep > index;
+          const isJumpable = isComplete;
 
           return (
             <li
               key={label}
-              className={`relative flex items-center justify-between gap-2 rounded-xl px-3 py-2 ${
-                isCurrent ? "bg-teal-50/70" : "bg-transparent"
-              }`}
+              className={`relative rounded-xl px-3 py-2 ${isCurrent ? "bg-teal-50/70" : "bg-transparent"}`}
             >
-              <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isJumpable) {
+                    goToStep(index);
+                  }
+                }}
+                disabled={!isJumpable}
+                className={`flex w-full items-center gap-2 text-left ${
+                  isJumpable ? "cursor-pointer" : "cursor-default"
+                }`}
+              >
                 <span
                   className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
                     isCurrent
@@ -39,14 +57,45 @@ export function StepIndicator() {
                   className={`text-sm ${
                     isCurrent
                       ? "font-semibold text-zinc-900"
-                    : isComplete
+                      : isComplete
                         ? "text-emerald-700"
                         : "text-zinc-400"
                   }`}
                 >
                   {label}
                 </span>
-              </span>
+              </button>
+
+              {index === 1 ? (
+                <div className="mt-2 space-y-1 pl-8 text-xs">
+                  <p
+                    className={
+                      currentStep === 1 && operationSubstep === "modification"
+                        ? "font-semibold text-teal-700"
+                        : opState.hasProvidedModification
+                          ? "text-emerald-700"
+                          : opState.hasInvalidModification
+                            ? "text-red-600"
+                            : "text-zinc-400"
+                    }
+                  >
+                    Sub-step: Modification
+                  </p>
+                  <p
+                    className={
+                      currentStep === 1 && operationSubstep === "shift"
+                        ? "font-semibold text-teal-700"
+                        : opState.hasProvidedShift
+                          ? "text-emerald-700"
+                          : opState.hasInvalidShift
+                            ? "text-red-600"
+                            : "text-zinc-400"
+                    }
+                  >
+                    Sub-step: Shift
+                  </p>
+                </div>
+              ) : null}
             </li>
           );
         })}

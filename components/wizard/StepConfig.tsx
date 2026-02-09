@@ -78,9 +78,9 @@ export function StepConfig() {
         </AccordionItem>
       </Accordion>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>
-          Back
+          Back: Species
         </Button>
         <Button color="primary" onPress={next}>
           Next: Review &amp; Run

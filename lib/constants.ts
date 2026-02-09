@@ -11,7 +11,7 @@ export const WIZARD_STEPS = [
 
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Enter and validate one miRNA identifier before moving to downstream biological decisions.",
-  1: "Choose exactly one operation that defines how isotar transforms the selected miRNA.",
+  1: "Configure optional Modification and Shift sub-steps. At least one must be provided.",
   2: "Select one or more prediction tools. Tool outputs are preserved as reported by each tool.",
   3: "Species defines biological scope. A species change invalidates previous predictions.",
   4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
@@ -40,19 +40,40 @@ export const OPERATION_OPTIONS: {
 
 export const TOOL_OPTIONS = [
   {
+    value: "miranda",
+    label: "miRanda",
+    description:
+      "Scan for miRNA-mRNA complementarity using alignment, thermodynamics, and conservation.",
+  },
+  {
+    value: "mirmap",
+    label: "miRmap",
+    description:
+      "Predict and rank target repression strength with integrated scoring features.",
+  },
+  {
     value: "targetscan",
     label: "TargetScan",
-    description: "Conservation-aware seed matching and context scoring.",
+    description:
+      "Predict conserved miRNA targets based on seed matching and repression context.",
   },
   {
-    value: "mirdb",
-    label: "miRDB",
-    description: "Machine-learning predictions from high-throughput evidence.",
+    value: "rnahybrid",
+    label: "RNAhybrid",
+    description:
+      "Find energetically favorable miRNA-target duplexes (flexible parameter settings).",
   },
   {
-    value: "mirwalk",
-    label: "miRWalk",
-    description: "Broad coverage predictions across transcript regions.",
+    value: "pita",
+    label: "PITA",
+    description:
+      "Predict targets by accounting for site accessibility and hybrid free energy.",
+  },
+  {
+    value: "dmiso",
+    label: "DMISO",
+    description:
+      "Use deep learning to detect miRNA/isomiR-mRNA interactions with complex learned features.",
   },
 ] as const;
 

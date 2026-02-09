@@ -5,12 +5,15 @@ import { Alert, Button, Chip } from "@heroui/react";
 import { useRouter } from "next/navigation";
 
 import { createJob } from "@/lib/api";
+import { evaluateOperationState } from "@/lib/operation";
 import { SPECIES_OPTIONS, TOOL_OPTIONS } from "@/lib/constants";
 import { useWizardStore } from "@/stores/wizardStore";
 
 function buildManifestPreview(args: {
   mirnaId: string;
-  operation?: string;
+  operationType?: string;
+  modifications: string[];
+  shift: string | null;
   tools: string[];
   species: string;
   config: { cores: number; maxRuntime: string; outputFormat: "standard" | "extended" };
@@ -21,11 +24,15 @@ function buildManifestPreview(args: {
         id: args.mirnaId,
       },
     },
-    operation: args.operation
+    operation: args.operationType
       ? {
-          type: args.operation,
+          type: args.operationType,
         }
       : undefined,
+    transformations: {
+      modifications: args.modifications,
+      shift: args.shift,
+    },
     prediction: {
       tools: args.tools.map((tool) => ({ name: tool })),
     },
@@ -42,7 +49,9 @@ export function StepReview() {
   const router = useRouter();
 
   const mirnaId = useWizardStore((state) => state.mirnaId);
-  const operation = useWizardStore((state) => state.operation);
+  const modifications = useWizardStore((state) => state.modifications);
+  const shiftLeft = useWizardStore((state) => state.shiftLeft);
+  const shiftRight = useWizardStore((state) => state.shiftRight);
   const tools = useWizardStore((state) => state.tools);
   const species = useWizardStore((state) => state.species);
   const config = useWizardStore((state) => state.config);
@@ -53,12 +62,16 @@ export function StepReview() {
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   const payload = toJobPayload();
+  const opState = evaluateOperationState(modifications, shiftLeft, shiftRight);
 
   const speciesLabel =
     SPECIES_OPTIONS.find((option) => option.value === species)?.subtitle ?? species;
+
   const manifestPreview = buildManifestPreview({
     mirnaId,
-    operation,
+    operationType: opState.operationType,
+    modifications: opState.formattedModifications,
+    shift: opState.shift,
     tools,
     species,
     config,
@@ -79,7 +92,7 @@ export function StepReview() {
   async function run() {
     if (!payload) {
       setErrorMessage(
-        "Review data is incomplete. Ensure miRNA, operation, tools, and species are set.",
+        "Review data is incomplete. Ensure miRNA, operation details, tools, and species are set.",
       );
       return;
     }
@@ -115,8 +128,29 @@ export function StepReview() {
           <strong>miRNA:</strong> {mirnaId}
         </p>
         <p>
-          <strong>Operation:</strong> {operation}
+          <strong>Operation mode:</strong> {opState.operationType ?? "Not set"}
         </p>
+
+        <div className="space-y-1">
+          <p>
+            <strong>Modification:</strong>
+          </p>
+          {opState.formattedModifications.length ? (
+            opState.formattedModifications.map((mod) => (
+              <p key={mod} className="pl-3 text-zinc-700">
+                • {mod.replace(":", ": ").replace("|", " → ")}
+              </p>
+            ))
+          ) : (
+            <p className="pl-3 text-zinc-600">None</p>
+          )}
+        </div>
+
+        <p>
+          <strong>Shift:</strong>{" "}
+          {opState.shift ? opState.shift.replace("|", " | ") : "None"}
+        </p>
+
         <p>
           <strong>Species:</strong> {speciesLabel}
         </p>
@@ -154,16 +188,18 @@ export function StepReview() {
 
       {errorMessage ? <Alert color="danger" title={errorMessage} variant="flat" /> : null}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>
-          Back
+          Back: Configuration
         </Button>
-        <Button variant="flat" onPress={downloadManifest}>
-          Download Manifest
-        </Button>
-        <Button color="primary" onPress={run} isDisabled={!payload} isLoading={isSubmitting}>
-          Start Job
-        </Button>
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button variant="flat" onPress={downloadManifest}>
+            Download Manifest
+          </Button>
+          <Button color="primary" onPress={run} isDisabled={!payload} isLoading={isSubmitting}>
+            Start Job
+          </Button>
+        </div>
       </div>
     </section>
   );

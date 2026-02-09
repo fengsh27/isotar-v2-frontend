@@ -1,11 +1,15 @@
 import { create } from "zustand";
 
-import type { CreateJobPayload, OperationType, WizardConfig } from "@/lib/types";
+import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
+import type { CreateJobPayload, WizardConfig } from "@/lib/types";
 
 interface WizardState {
   step: number;
+  operationSubstep: "modification" | "shift";
   mirnaId: string;
-  operation?: OperationType;
+  modifications: ModificationInput[];
+  shiftLeft: string;
+  shiftRight: string;
   tools: string[];
   species: string;
   config: {
@@ -14,7 +18,12 @@ interface WizardState {
     outputFormat: WizardConfig["outputFormat"];
   };
   setMirnaId: (mirnaId: string) => void;
-  setOperation: (operation: OperationType) => void;
+  setOperationSubstep: (operationSubstep: "modification" | "shift") => void;
+  addModificationRow: () => void;
+  updateModificationRow: (index: number, patch: Partial<ModificationInput>) => void;
+  removeModificationRow: (index: number) => void;
+  setShiftLeft: (shiftLeft: string) => void;
+  setShiftRight: (shiftRight: string) => void;
   toggleTool: (tool: string) => void;
   setSpecies: (species: string) => void;
   setCores: (cores: number) => void;
@@ -31,12 +40,23 @@ const TOTAL_STEPS = 6;
 
 const initialState: Pick<
   WizardState,
-  "step" | "mirnaId" | "operation" | "tools" | "species" | "config"
+  | "step"
+  | "operationSubstep"
+  | "mirnaId"
+  | "modifications"
+  | "shiftLeft"
+  | "shiftRight"
+  | "tools"
+  | "species"
+  | "config"
 > = {
   step: 0,
+  operationSubstep: "modification",
   mirnaId: "",
-  operation: undefined,
-  tools: [] as string[],
+  modifications: [],
+  shiftLeft: "",
+  shiftRight: "",
+  tools: [],
   species: "",
   config: {
     cores: 8,
@@ -48,14 +68,35 @@ const initialState: Pick<
 export const useWizardStore = create<WizardState>((set, get) => ({
   ...initialState,
   setMirnaId: (mirnaId) => set({ mirnaId }),
-  setOperation: (operation) => set({ operation }),
+  setOperationSubstep: (operationSubstep) => set({ operationSubstep }),
+  addModificationRow: () =>
+    set((state) => ({
+      modifications: [
+        ...state.modifications,
+        {
+          position: "",
+          original: "A",
+          replacement: "G",
+        },
+      ],
+    })),
+  updateModificationRow: (index, patch) =>
+    set((state) => ({
+      modifications: state.modifications.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, ...patch } : row,
+      ),
+    })),
+  removeModificationRow: (index) =>
+    set((state) => ({
+      modifications: state.modifications.filter((_, rowIndex) => rowIndex !== index),
+    })),
+  setShiftLeft: (shiftLeft) => set({ shiftLeft }),
+  setShiftRight: (shiftRight) => set({ shiftRight }),
   toggleTool: (tool) =>
     set((state) => {
       const exists = state.tools.includes(tool);
       return {
-        tools: exists
-          ? state.tools.filter((item) => item !== tool)
-          : [...state.tools, tool],
+        tools: exists ? state.tools.filter((item) => item !== tool) : [...state.tools, tool],
       };
     }),
   setSpecies: (species) => set({ species }),
@@ -95,14 +136,21 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   reset: () => set({ ...initialState }),
   toJobPayload: () => {
     const state = get();
+    const opState = evaluateOperationState(
+      state.modifications,
+      state.shiftLeft,
+      state.shiftRight,
+    );
 
-    if (!state.mirnaId || !state.operation || !state.species || !state.tools.length) {
+    if (!state.mirnaId || !state.species || !state.tools.length || !opState.isValid) {
       return null;
     }
 
     return {
       mirna_id: state.mirnaId,
-      operation: state.operation,
+      operation: opState.operationType ?? "shift",
+      modifications: opState.formattedModifications,
+      shift: opState.shift,
       tools: state.tools,
       species: state.species,
       configuration: state.config,

@@ -45,9 +45,9 @@ export function StepSpecies() {
         title="Changing species will recompute predictions."
       />
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>
-          Back
+          Back: Prediction Tools
         </Button>
         <Button color="primary" onPress={next} isDisabled={!species}>
           Next: Configuration

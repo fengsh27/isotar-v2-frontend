@@ -24,7 +24,7 @@ export function Wizard() {
   const StepComponent = stepComponents[step];
 
   return (
-    <div className="grid gap-6 fade-rise lg:grid-cols-[250px_minmax(0,1fr)_300px]">
+    <div className="grid gap-6 fade-rise lg:grid-cols-[210px_minmax(0,1fr)_240px]">
       <aside className="lg:sticky lg:top-6 lg:self-start">
         <StepIndicator />
       </aside>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Accordion, AccordionItem, Button, Checkbox, CheckboxGroup } from "@heroui/react";
+import { Button } from "@heroui/react";
 
 import { TOOL_OPTIONS } from "@/lib/constants";
 import { useWizardStore } from "@/stores/wizardStore";
@@ -16,53 +16,54 @@ export function StepTools() {
       <div>
         <h2 className="text-xl font-semibold text-zinc-900">Select Prediction Tools</h2>
         <p className="mt-1 text-sm text-zinc-600">
-          Select one or more tools. Tool-level scores are stored verbatim for downstream analysis.
+          Select target prediction algorithms to use. Choose at least one tool before proceeding.
         </p>
       </div>
 
-      <CheckboxGroup
-        label="Prediction tools"
-        value={tools}
-        onValueChange={(nextTools) => {
-          const nextSet = new Set(nextTools);
-          const currentSet = new Set(tools);
+      <div className="rounded-2xl border border-zinc-200 bg-white/80 p-4">
+        <h3 className="text-base font-semibold text-zinc-900">Tool Selection</h3>
 
-          for (const tool of TOOL_OPTIONS) {
-            const inNext = nextSet.has(tool.value);
-            const inCurrent = currentSet.has(tool.value);
-            if (inNext !== inCurrent) {
-              toggleTool(tool.value);
-            }
-          }
-        }}
-      >
-        {TOOL_OPTIONS.map((tool) => (
-          <Checkbox key={tool.value} value={tool.value}>
-            <span className="flex flex-col">
-              <span>{tool.label}</span>
-              <span className="text-xs font-normal text-zinc-500">{tool.description}</span>
-            </span>
-          </Checkbox>
-        ))}
-      </CheckboxGroup>
+        <div className="mt-3 overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200 bg-zinc-50">
+                <th className="px-4 py-3 text-sm font-semibold text-zinc-800">Tool</th>
+                <th className="px-4 py-3 text-sm font-semibold text-zinc-800">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TOOL_OPTIONS.map((tool) => {
+                const checked = tools.includes(tool.value);
 
-      <Accordion variant="splitted">
-        <AccordionItem
-          key="tool-options"
-          aria-label="Advanced tool options"
-          title="Advanced tool options"
-          subtitle="Collapsed by default"
-        >
-          <p className="text-sm text-zinc-600">
-            Tool-level thresholds and compatibility toggles can be exposed here when backend
-            contracts are finalized.
-          </p>
-        </AccordionItem>
-      </Accordion>
+                return (
+                  <tr key={tool.value} className="border-b border-zinc-100 last:border-b-0">
+                    <td className="px-4 py-3 text-sm font-medium text-zinc-900">
+                      <label className="inline-flex cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleTool(tool.value)}
+                          className="h-4 w-4 rounded border-zinc-400 text-teal-700 focus:ring-teal-600"
+                        />
+                        {tool.label}
+                      </label>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-600">{tool.description}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-      <div className="flex flex-wrap gap-3">
+        <p className={`mt-4 text-sm ${tools.length ? "text-zinc-700" : "font-medium text-red-600"}`}>
+          The user must select <strong>at least one</strong> prediction tool before proceeding.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>
-          Back
+          Back: Operation
         </Button>
         <Button color="primary" onPress={next} isDisabled={!tools.length}>
           Next: Species
