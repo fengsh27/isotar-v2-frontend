@@ -49,8 +49,8 @@ export default function JobsPage() {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 fade-rise">
+      <header className="surface-panel-strong flex flex-wrap items-center justify-between gap-3 rounded-2xl p-5">
         <div>
           <h1 className="text-3xl font-semibold text-zinc-900">My Jobs</h1>
           <p className="mt-1 text-sm text-zinc-700">Asynchronous runs and their immutable status.</p>
@@ -71,7 +71,7 @@ export default function JobsPage() {
       ) : null}
 
       {!isLoading && jobs.length === 0 ? (
-        <Card className="border border-zinc-200 bg-white/80">
+        <Card className="surface-panel rounded-2xl border-0">
           <CardBody className="text-sm text-zinc-700">
             No jobs found. Start one from <Link className="text-teal-700 underline" href="/run">Run Analysis</Link>.
           </CardBody>
@@ -80,7 +80,7 @@ export default function JobsPage() {
 
       <div className="space-y-3">
         {jobs.map((job) => (
-          <Card key={job.job_id} className="border border-zinc-200 bg-white/85">
+          <Card key={job.job_id} className="surface-panel rounded-2xl border-0">
             <CardBody className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm font-semibold text-zinc-900">{job.job_id}</p>

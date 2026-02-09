@@ -80,12 +80,12 @@ export function JobResults({ results }: { results?: JobResultsData }) {
         : "N/A";
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white/85 p-4">
+    <section className="surface-panel rounded-2xl p-4">
       <h2 className="mb-3 text-xl font-semibold text-zinc-900">Results</h2>
       <Tabs aria-label="Result sections" variant="underlined">
         <Tab key="summary" title="Summary">
           <div className="mt-4 space-y-4">
-            <Card className="border border-zinc-200 bg-white/80">
+            <Card className="surface-panel rounded-xl border-0">
               <CardBody className="text-sm text-zinc-700">
                 <p>• {targetCount} predicted targets</p>
                 <p>• {toolsUsed} tools used</p>
@@ -94,15 +94,15 @@ export function JobResults({ results }: { results?: JobResultsData }) {
             </Card>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
+              <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
                 [ Bar chart ]
               </div>
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
+              <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
                 [ Bubble plot ]
               </div>
             </div>
 
-            <Card className="border border-zinc-200 bg-white/80">
+            <Card className="surface-panel rounded-xl border-0">
               <CardHeader>
                 <h3 className="text-base font-semibold text-zinc-900">Summary Payload</h3>
               </CardHeader>
@@ -120,7 +120,7 @@ export function JobResults({ results }: { results?: JobResultsData }) {
         </Tab>
 
         <Tab key="targets" title="Targets">
-          <Card className="mt-4 border border-zinc-200 bg-white/80">
+          <Card className="surface-panel mt-4 rounded-xl border-0">
             <CardHeader>
               <h3 className="text-base font-semibold text-zinc-900">Predicted Targets</h3>
             </CardHeader>
@@ -129,7 +129,7 @@ export function JobResults({ results }: { results?: JobResultsData }) {
         </Tab>
 
         <Tab key="enrichment" title="Enrichment">
-          <Card className="mt-4 border border-zinc-200 bg-white/80">
+          <Card className="surface-panel mt-4 rounded-xl border-0">
             <CardHeader>
               <h3 className="text-base font-semibold text-zinc-900">Enrichment</h3>
             </CardHeader>
@@ -138,7 +138,7 @@ export function JobResults({ results }: { results?: JobResultsData }) {
         </Tab>
 
         <Tab key="downloads" title="Downloads">
-          <Card className="mt-4 border border-zinc-200 bg-white/80">
+          <Card className="surface-panel mt-4 rounded-xl border-0">
             <CardBody className="flex flex-wrap gap-3">
               <Button
                 variant="flat"

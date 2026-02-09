@@ -112,8 +112,8 @@ export function JobStatus({ jobId }: { jobId: string }) {
   }, [jobId]);
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-zinc-200 bg-white/85 p-5">
+    <div className="space-y-4 fade-rise">
+      <div className="surface-panel-strong rounded-2xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-900">Job {jobId}</h1>
@@ -165,7 +165,7 @@ export function JobStatus({ jobId }: { jobId: string }) {
       {job ? <JobProgress job={job} /> : null}
 
       {job ? (
-        <section className="rounded-2xl border border-zinc-200 bg-white/85 p-5">
+        <section className="surface-panel rounded-2xl p-5">
           <div className="space-y-2">
             {stageStates(job).map((item) => (
               <p key={item.stage} className="flex items-center gap-2 text-sm text-zinc-700">
@@ -205,7 +205,7 @@ export function JobStatus({ jobId }: { jobId: string }) {
       {job?.status === "completed" ? (
         <JobResults results={job.results} />
       ) : (
-        <div className="rounded-xl border border-zinc-200 bg-white/80 p-4 text-sm text-zinc-600">
+        <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
           {isFinished
             ? "Job finished without a completed result payload."
             : "Results will appear automatically when the job completes."}

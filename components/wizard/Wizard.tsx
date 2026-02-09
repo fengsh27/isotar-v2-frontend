@@ -24,18 +24,18 @@ export function Wizard() {
   const StepComponent = stepComponents[step];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+    <div className="grid gap-6 fade-rise lg:grid-cols-[250px_minmax(0,1fr)_300px]">
       <aside className="lg:sticky lg:top-6 lg:self-start">
         <StepIndicator />
       </aside>
 
-      <section className="rounded-2xl border border-zinc-200/80 bg-white/85 p-6 shadow-sm backdrop-blur">
+      <section className="surface-panel rounded-3xl p-6 md:p-7">
         <StepComponent />
       </section>
 
-      <aside className="rounded-2xl border border-zinc-200/80 bg-white/80 p-5 text-sm text-zinc-700 shadow-sm backdrop-blur">
+      <aside className="surface-panel rounded-3xl p-5 text-sm text-zinc-700">
         <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">Context</p>
-        <p className="mt-2">{STEP_CONTEXT[step]}</p>
+        <p className="mt-2 leading-relaxed">{STEP_CONTEXT[step]}</p>
         <p className="mt-4 text-xs text-zinc-500">
           Step {step + 1} of {WIZARD_STEPS.length}
         </p>

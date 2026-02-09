@@ -8,6 +8,8 @@
   --accent: #0f766e;
   --accent-strong: #115e59;
   --accent-warm: #c2410c;
+  --line-soft: rgba(15, 35, 34, 0.14);
+  --shadow-soft: 0 16px 40px rgba(19, 35, 34, 0.08);
 }
 
 @theme inline {
@@ -39,4 +41,63 @@ a {
 code,
 pre {
   font-family: "IBM Plex Mono", "Menlo", "Consolas", monospace;
+}
+
+::selection {
+  background: rgba(15, 118, 110, 0.22);
+}
+
+.surface-panel {
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
+}
+
+.surface-panel-strong {
+  border: 1px solid rgba(15, 35, 34, 0.18);
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(248, 251, 249, 0.9) 100%
+  );
+  box-shadow: var(--shadow-soft);
+}
+
+.ink-gradient {
+  background: linear-gradient(120deg, #103c38 0%, #0f766e 55%, #1f9c92 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.grid-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.grid-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(15, 35, 34, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 35, 34, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at 20% 20%, #000 10%, transparent 72%);
+}
+
+.fade-rise {
+  animation: fade-rise 440ms ease-out both;
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
