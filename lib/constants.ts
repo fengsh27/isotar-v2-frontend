@@ -1,0 +1,98 @@
+import type { JobStatusValue, OperationType } from "@/lib/types";
+
+export const WIZARD_STEPS = [
+  "miRNA",
+  "Operation",
+  "Prediction Tools",
+  "Species",
+  "Configuration",
+  "Review & Run",
+] as const;
+
+export const STEP_CONTEXT: Record<number, string> = {
+  0: "Enter and validate one miRNA identifier before moving to downstream biological decisions.",
+  1: "Choose exactly one operation that defines how isotar transforms the selected miRNA.",
+  2: "Select one or more prediction tools. Tool outputs are preserved as reported by each tool.",
+  3: "Species defines biological scope. A species change invalidates previous predictions.",
+  4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
+  5: "Review your run request, then start an immutable asynchronous job.",
+};
+
+export const OPERATION_OPTIONS: {
+  value: OperationType;
+  label: string;
+  description: string;
+  bullets: string[];
+}[] = [
+  {
+    value: "shift",
+    label: "Shift",
+    description: "Shift miRNA binding position before target prediction.",
+    bullets: ["Binding offset", "Seed move", "Positional exploration"],
+  },
+  {
+    value: "modification",
+    label: "Modification",
+    description: "Modify miRNA sequence context before target prediction.",
+    bullets: ["Sequence edit", "Mutation modeling", "Nucleotide modification"],
+  },
+];
+
+export const TOOL_OPTIONS = [
+  {
+    value: "targetscan",
+    label: "TargetScan",
+    description: "Conservation-aware seed matching and context scoring.",
+  },
+  {
+    value: "mirdb",
+    label: "miRDB",
+    description: "Machine-learning predictions from high-throughput evidence.",
+  },
+  {
+    value: "mirwalk",
+    label: "miRWalk",
+    description: "Broad coverage predictions across transcript regions.",
+  },
+] as const;
+
+export const SPECIES_OPTIONS = [
+  {
+    value: "9606",
+    label: "Homo sapiens",
+    subtitle: "Homo sapiens (Taxonomy ID: 9606)",
+  },
+  {
+    value: "10090",
+    label: "Mus musculus",
+    subtitle: "Mus musculus (Taxonomy ID: 10090)",
+  },
+  {
+    value: "10116",
+    label: "Rattus norvegicus",
+    subtitle: "Rattus norvegicus (Taxonomy ID: 10116)",
+  },
+] as const;
+
+export const OUTPUT_FORMAT_OPTIONS = [
+  { value: "standard", label: "Standard" },
+  { value: "extended", label: "Extended" },
+] as const;
+
+export const JOB_STAGE_SEQUENCE = [
+  "miRNA preprocessing",
+  "TargetScan prediction",
+  "miRDB prediction",
+  "Aggregation",
+] as const;
+
+export const STATUS_COLOR: Record<
+  JobStatusValue,
+  "default" | "primary" | "success" | "warning" | "danger"
+> = {
+  queued: "warning",
+  running: "primary",
+  completed: "success",
+  failed: "danger",
+  cancelled: "default",
+};
