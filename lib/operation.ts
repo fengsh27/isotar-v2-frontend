@@ -6,7 +6,7 @@ export type NucleotideBase = (typeof BASE_OPTIONS)[number];
 
 export interface ModificationInput {
   position: string;
-  original: NucleotideBase;
+  original: NucleotideBase | "";
   replacement: NucleotideBase;
 }
 
@@ -28,6 +28,10 @@ function isIntegerString(value: string): boolean {
   return /^-?\d+$/.test(value.trim());
 }
 
+function isBase(value: string): value is NucleotideBase {
+  return (BASE_OPTIONS as readonly string[]).includes(value);
+}
+
 function normalizeInt(value: string): string {
   return String(parseInt(value, 10));
 }
@@ -39,6 +43,10 @@ function isValidModificationRow(row: ModificationInput): boolean {
 
   const pos = parseInt(row.position, 10);
   if (!Number.isFinite(pos) || pos < 1) {
+    return false;
+  }
+
+  if (!isBase(row.original) || !isBase(row.replacement)) {
     return false;
   }
 

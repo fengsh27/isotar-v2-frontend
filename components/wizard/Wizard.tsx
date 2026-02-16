@@ -11,10 +11,10 @@ import { STEP_CONTEXT, WIZARD_STEPS } from "@/lib/constants";
 import { useWizardStore } from "@/stores/wizardStore";
 
 const stepComponents = [
+  StepSpecies,
   StepMiRNA,
   StepOperation,
   StepTools,
-  StepSpecies,
   StepConfig,
   StepReview,
 ];

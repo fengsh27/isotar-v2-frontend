@@ -80,7 +80,7 @@ export function StepConfig() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>
-          Back: Species
+          Back: Prediction Tools
         </Button>
         <Button color="primary" onPress={next}>
           Next: Review &amp; Run

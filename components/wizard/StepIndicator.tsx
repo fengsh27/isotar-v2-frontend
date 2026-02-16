@@ -38,52 +38,36 @@ export function StepIndicator() {
                   }
                 }}
                 disabled={!isJumpable}
-                className={`flex w-full items-center gap-2 text-left ${
-                  isJumpable ? "cursor-pointer" : "cursor-default"
-                }`}
+                className={`flex w-full items-center gap-2 text-left ${isJumpable ? "cursor-pointer" : "cursor-default"
+                  }`}
               >
                 <span
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                    isCurrent
-                      ? "bg-teal-600 text-white"
-                      : isComplete
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-zinc-100 text-zinc-400"
-                  }`}
+                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isCurrent
+                    ? "bg-teal-600 text-white"
+                    : isComplete
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-zinc-100 text-zinc-400"
+                    }`}
                 >
                   {index + 1}
                 </span>
                 <span
-                  className={`text-sm ${
-                    isCurrent
-                      ? "font-semibold text-zinc-900"
-                      : isComplete
-                        ? "text-emerald-700"
-                        : "text-zinc-400"
-                  }`}
+                  className={`text-sm ${isCurrent
+                    ? "font-semibold text-zinc-900"
+                    : isComplete
+                      ? "text-emerald-700"
+                      : "text-zinc-400"
+                    }`}
                 >
                   {label}
                 </span>
               </button>
 
-              {index === 1 ? (
+              {index === 2 ? (
                 <div className="mt-2 space-y-1 pl-8 text-xs">
                   <p
                     className={
-                      currentStep === 1 && operationSubstep === "modification"
-                        ? "font-semibold text-teal-700"
-                        : opState.hasProvidedModification
-                          ? "text-emerald-700"
-                          : opState.hasInvalidModification
-                            ? "text-red-600"
-                            : "text-zinc-400"
-                    }
-                  >
-                    Sub-step: Modification
-                  </p>
-                  <p
-                    className={
-                      currentStep === 1 && operationSubstep === "shift"
+                      currentStep === 2 && operationSubstep === "shift"
                         ? "font-semibold text-teal-700"
                         : opState.hasProvidedShift
                           ? "text-emerald-700"
@@ -92,7 +76,20 @@ export function StepIndicator() {
                             : "text-zinc-400"
                     }
                   >
-                    Sub-step: Shift
+                    {index + 1}.1 Shift
+                  </p>
+                  <p
+                    className={
+                      currentStep === 2 && operationSubstep === "modification"
+                        ? "font-semibold text-teal-700"
+                        : opState.hasProvidedModification
+                          ? "text-emerald-700"
+                          : opState.hasInvalidModification
+                            ? "text-red-600"
+                            : "text-zinc-400"
+                    }
+                  >
+                    {index + 1}.2 Modification
                   </p>
                 </div>
               ) : null}

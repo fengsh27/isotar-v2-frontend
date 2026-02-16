@@ -5,8 +5,9 @@ import type { CreateJobPayload, WizardConfig } from "@/lib/types";
 
 interface WizardState {
   step: number;
-  operationSubstep: "modification" | "shift";
+  operationSubstep: "shift" | "modification";
   mirnaId: string;
+  humanReference: "hg19" | "hg38" | "";
   modifications: ModificationInput[];
   shiftLeft: string;
   shiftRight: string;
@@ -18,7 +19,8 @@ interface WizardState {
     outputFormat: WizardConfig["outputFormat"];
   };
   setMirnaId: (mirnaId: string) => void;
-  setOperationSubstep: (operationSubstep: "modification" | "shift") => void;
+  setHumanReference: (humanReference: "hg19" | "hg38" | "") => void;
+  setOperationSubstep: (operationSubstep: "shift" | "modification") => void;
   addModificationRow: () => void;
   updateModificationRow: (index: number, patch: Partial<ModificationInput>) => void;
   removeModificationRow: (index: number) => void;
@@ -43,6 +45,7 @@ const initialState: Pick<
   | "step"
   | "operationSubstep"
   | "mirnaId"
+  | "humanReference"
   | "modifications"
   | "shiftLeft"
   | "shiftRight"
@@ -51,8 +54,9 @@ const initialState: Pick<
   | "config"
 > = {
   step: 0,
-  operationSubstep: "modification",
+  operationSubstep: "shift",
   mirnaId: "",
+  humanReference: "",
   modifications: [],
   shiftLeft: "",
   shiftRight: "",
@@ -68,6 +72,7 @@ const initialState: Pick<
 export const useWizardStore = create<WizardState>((set, get) => ({
   ...initialState,
   setMirnaId: (mirnaId) => set({ mirnaId }),
+  setHumanReference: (humanReference) => set({ humanReference }),
   setOperationSubstep: (operationSubstep) => set({ operationSubstep }),
   addModificationRow: () =>
     set((state) => ({
@@ -75,7 +80,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
         ...state.modifications,
         {
           position: "",
-          original: "A",
+          original: "",
           replacement: "G",
         },
       ],
@@ -146,6 +151,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       return null;
     }
 
+    const referenceFile =
+      state.species === "9606" && state.humanReference ? state.humanReference : null;
+
     return {
       mirna_id: state.mirnaId,
       operation: opState.operationType ?? "shift",
@@ -153,7 +161,10 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       shift: opState.shift,
       tools: state.tools,
       species: state.species,
-      configuration: state.config,
+      configuration: {
+        ...state.config,
+        referenceFile,
+      },
     };
   },
 }));

@@ -1,19 +1,19 @@
 import type { JobStatusValue, OperationType } from "@/lib/types";
 
 export const WIZARD_STEPS = [
+  "Species",
   "miRNA",
   "Operation",
   "Prediction Tools",
-  "Species",
   "Configuration",
   "Review & Run",
 ] as const;
 
 export const STEP_CONTEXT: Record<number, string> = {
-  0: "Enter and validate one miRNA identifier before moving to downstream biological decisions.",
-  1: "Configure optional Modification and Shift sub-steps. At least one must be provided.",
-  2: "Select one or more prediction tools. Tool outputs are preserved as reported by each tool.",
-  3: "Species defines biological scope. A species change invalidates previous predictions.",
+  0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
+  1: "Choose one miRNA identifier from the available list for the selected species.",
+  2: "Configure optional Modification and Shift sub-steps. At least one must be provided.",
+  3: "Select one or more prediction tools. Tool outputs are preserved as reported by each tool.",
   4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
   5: "Review your run request, then start an immutable asynchronous job.",
 };

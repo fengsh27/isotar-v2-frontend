@@ -66,7 +66,7 @@ export function StepTools() {
           Back: Operation
         </Button>
         <Button color="primary" onPress={next} isDisabled={!tools.length}>
-          Next: Species
+          Next: Configuration
         </Button>
       </div>
     </section>

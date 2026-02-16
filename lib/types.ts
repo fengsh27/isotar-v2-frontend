@@ -11,6 +11,7 @@ export interface WizardConfig {
   cores: number;
   maxRuntime: string;
   outputFormat: "standard" | "extended";
+  referenceFile?: "hg19" | "hg38" | null;
 }
 
 export interface CreateJobPayload {

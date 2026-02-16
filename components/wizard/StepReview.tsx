@@ -49,6 +49,7 @@ export function StepReview() {
   const router = useRouter();
 
   const mirnaId = useWizardStore((state) => state.mirnaId);
+  const humanReference = useWizardStore((state) => state.humanReference);
   const modifications = useWizardStore((state) => state.modifications);
   const shiftLeft = useWizardStore((state) => state.shiftLeft);
   const shiftRight = useWizardStore((state) => state.shiftRight);
@@ -154,6 +155,11 @@ export function StepReview() {
         <p>
           <strong>Species:</strong> {speciesLabel}
         </p>
+        {species === "9606" ? (
+          <p>
+            <strong>Reference file:</strong> {humanReference || "Not set"}
+          </p>
+        ) : null}
         <p>
           <strong>Configuration:</strong> {config.cores} cores
         </p>

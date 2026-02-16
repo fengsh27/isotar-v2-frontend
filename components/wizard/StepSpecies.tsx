@@ -7,9 +7,14 @@ import { useWizardStore } from "@/stores/wizardStore";
 
 export function StepSpecies() {
   const species = useWizardStore((state) => state.species);
+  const humanReference = useWizardStore((state) => state.humanReference);
   const setSpecies = useWizardStore((state) => state.setSpecies);
+  const setHumanReference = useWizardStore((state) => state.setHumanReference);
+  const setMirnaId = useWizardStore((state) => state.setMirnaId);
   const next = useWizardStore((state) => state.next);
-  const back = useWizardStore((state) => state.back);
+
+  const isHuman = species === "9606";
+  const canProceed = !!species && (!isHuman || !!humanReference);
 
   return (
     <section className="space-y-6">
@@ -27,7 +32,15 @@ export function StepSpecies() {
         <select
           id="species-select"
           value={species}
-          onChange={(event) => setSpecies(event.target.value)}
+          onChange={(event) => {
+            const nextSpecies = event.target.value;
+            setSpecies(nextSpecies);
+            setMirnaId("");
+
+            if (nextSpecies !== "9606") {
+              setHumanReference("");
+            }
+          }}
           className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-teal-600 focus:outline-none"
         >
           <option value="">Select species</option>
@@ -39,18 +52,48 @@ export function StepSpecies() {
         </select>
       </div>
 
-      <Alert
-        color="warning"
-        variant="flat"
-        title="Changing species will recompute predictions."
-      />
+      {isHuman ? (
+        <div className="rounded-xl border border-zinc-200 bg-white/80 p-4">
+          <p className="text-sm font-semibold text-zinc-900">Reference file (Homo sapiens)</p>
+          <p className="mt-1 text-xs text-zinc-600">Choose genome reference: hg19 or hg38.</p>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button variant="flat" onPress={back}>
-          Back: Prediction Tools
-        </Button>
-        <Button color="primary" onPress={next} isDisabled={!species}>
-          Next: Configuration
+          <div className="mt-3 flex flex-wrap gap-4">
+            <label className="inline-flex items-center gap-2 text-sm text-zinc-800">
+              <input
+                type="radio"
+                name="human-reference"
+                value="hg19"
+                checked={humanReference === "hg19"}
+                onChange={() => setHumanReference("hg19")}
+              />
+              hg19
+            </label>
+
+            <label className="inline-flex items-center gap-2 text-sm text-zinc-800">
+              <input
+                type="radio"
+                name="human-reference"
+                value="hg38"
+                checked={humanReference === "hg38"}
+                onChange={() => setHumanReference("hg38")}
+              />
+              hg38
+            </label>
+          </div>
+
+          {!humanReference ? (
+            <p className="mt-2 text-sm font-medium text-red-600">
+              Please select a reference file before continuing.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <Alert color="warning" variant="flat" title="Changing species will recompute predictions." />
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <Button color="primary" onPress={next} isDisabled={!canProceed}>
+          Next: miRNA
         </Button>
       </div>
     </section>

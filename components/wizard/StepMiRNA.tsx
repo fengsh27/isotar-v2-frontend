@@ -43,9 +43,11 @@ function toFasta(id: string, record: MirnaRecord): string {
 }
 
 export function StepMiRNA() {
+  const species = useWizardStore((state) => state.species);
   const mirnaId = useWizardStore((state) => state.mirnaId);
   const setMirnaId = useWizardStore((state) => state.setMirnaId);
   const setOperationSubstep = useWizardStore((state) => state.setOperationSubstep);
+  const back = useWizardStore((state) => state.back);
   const next = useWizardStore((state) => state.next);
 
   const [dataset, setDataset] = useState<MirnaDataset | null>(null);
@@ -60,6 +62,18 @@ export function StepMiRNA() {
 
     const loadData = async () => {
       try {
+        if (species !== "9606") {
+          if (!active) {
+            return;
+          }
+
+          setDataset({});
+          setSelectedId("");
+          setQuery("");
+          setMirnaId("");
+          return;
+        }
+
         const loaded = (await import("@/data/mature_pre_mirna_ext.json")).default as MirnaDataset;
         if (!active) {
           return;
@@ -87,7 +101,7 @@ export function StepMiRNA() {
     return () => {
       active = false;
     };
-  }, [mirnaId]);
+  }, [mirnaId, setMirnaId, species]);
 
   const ids = useMemo(() => {
     if (!dataset) {
@@ -98,16 +112,20 @@ export function StepMiRNA() {
   }, [dataset]);
 
   const filteredIds = useMemo(() => {
+    if (species !== "9606") {
+      return [];
+    }
+
     if (!query.trim()) {
       return ids;
     }
 
     const term = query.trim().toLowerCase();
     return ids.filter((id) => id.toLowerCase().includes(term));
-  }, [ids, query]);
+  }, [ids, query, species]);
 
   useEffect(() => {
-    if (!dataset) {
+    if (!dataset || species !== "9606") {
       return;
     }
 
@@ -117,7 +135,7 @@ export function StepMiRNA() {
       setSelectedRecordIndex(0);
       setMirnaId(query.trim());
     }
-  }, [dataset, query, setMirnaId]);
+  }, [dataset, query, setMirnaId, species]);
 
   const records = selectedId && dataset ? dataset[selectedId] ?? [] : [];
   const selectedRecord = records[selectedRecordIndex] ?? null;
@@ -216,6 +234,11 @@ export function StepMiRNA() {
             <p className="mb-2 px-1 text-xs text-zinc-500">
               Showing {filteredIds.length} matches
             </p>
+            {species !== "9606" ? (
+              <p className="px-1 py-2 text-sm text-zinc-600">
+                No miRNA ID list available for the selected species.
+              </p>
+            ) : null}
             <div className="grid gap-1">
               {filteredIds.map((id) => (
                 <button
@@ -318,11 +341,14 @@ export function StepMiRNA() {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="flat" onPress={back}>
+          Back: Species
+        </Button>
         <Button
           color="primary"
           onPress={() => {
-            setOperationSubstep("modification");
+            setOperationSubstep("shift");
             next();
           }}
           isDisabled={!canProceed}

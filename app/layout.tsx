@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Providers } from "@/app/providers";
-import { getApiBase } from "@/lib/api";
 
 import "./globals.css";
 
@@ -18,8 +17,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const apiBase = getApiBase();
-
   return (
     <html lang="en">
       <body className="antialiased">
@@ -50,12 +47,7 @@ export default function RootLayout({
 
             <main className="mx-auto w-full max-w-6xl px-5 pb-8 pt-3">{children}</main>
 
-            <footer className="mx-auto mt-8 w-full max-w-6xl px-5 pb-6">
-              {/*<div className="surface-panel rounded-2xl px-4 py-3 text-xs text-zinc-600">
-                Frontend (stateless) → API → Job → Results
-                <span className="ml-2">{apiBase ? `API: ${apiBase}` : "API: same-origin"}</span>
-              </div>*/}
-            </footer>
+            <footer className="mx-auto mt-8 w-full max-w-6xl px-5 pb-6" />
           </div>
         </Providers>
       </body>
