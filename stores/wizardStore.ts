@@ -156,7 +156,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
 
     return {
       mirna_id: state.mirnaId,
-      operation: opState.operationType ?? "shift",
+      operation: opState.operationType,
       modifications: opState.formattedModifications,
       shift: opState.shift,
       tools: state.tools,

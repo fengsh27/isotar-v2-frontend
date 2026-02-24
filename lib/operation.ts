@@ -79,7 +79,7 @@ export function evaluateOperationState(
   const hasProvidedShift = hasValidShift;
 
   const hasAtLeastOneOperation = hasProvidedModification || hasProvidedShift;
-  const isValid = !hasInvalidModification && !hasInvalidShift && hasAtLeastOneOperation;
+  const isValid = !hasInvalidModification && !hasInvalidShift;
 
   let operationType: OperationType | undefined;
   if (hasProvidedModification) {

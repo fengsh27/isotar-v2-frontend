@@ -93,7 +93,7 @@ export function StepReview() {
   async function run() {
     if (!payload) {
       setErrorMessage(
-        "Review data is incomplete. Ensure miRNA, operation details, tools, and species are set.",
+        "Review data is incomplete. Ensure miRNA, tools, and species are set.",
       );
       return;
     }

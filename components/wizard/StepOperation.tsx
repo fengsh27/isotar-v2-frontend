@@ -40,6 +40,15 @@ function parseShiftPreviewValue(value: string): number {
   return /^-?\d+$/.test(trimmed) ? parseInt(trimmed, 10) : 0;
 }
 
+function parseIntegerString(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed || !/^-?\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  return parseInt(trimmed, 10);
+}
+
 function getBaseAtPosition(sequence: string, position: string): NucleotideBase | null {
   const trimmed = position.trim();
   if (!/^\d+$/.test(trimmed)) {
@@ -113,6 +122,22 @@ export function StepOperation() {
 
   const operationState = evaluateOperationState(modifications, shiftLeft, shiftRight);
   const atShiftSubstep = operationSubstep === "shift";
+  const shiftBoundaryValidation = useMemo(() => {
+    if (!selectedRecord) {
+      return { hasInvalidBoundary: false, start: null as number | null, end: null as number | null };
+    }
+
+    const left = parseIntegerString(shiftLeft);
+    const right = parseIntegerString(shiftRight);
+    if (left === null || right === null) {
+      return { hasInvalidBoundary: false, start: null as number | null, end: null as number | null };
+    }
+
+    const start = selectedRecord.mature_loc_start + left;
+    const end = selectedRecord.mature_loc_end + right;
+
+    return { hasInvalidBoundary: end < start, start, end };
+  }, [selectedRecord, shiftLeft, shiftRight]);
 
   const shiftPreview = useMemo(() => {
     if (!selectedRecord) {
@@ -132,6 +157,30 @@ export function StepOperation() {
       clampedStart,
       clampedEnd,
     );
+  }, [selectedRecord, shiftLeft, shiftRight]);
+
+  const precursorDisplay = useMemo(() => {
+    if (!selectedRecord) {
+      return null;
+    }
+
+    const left = parseShiftPreviewValue(shiftLeft);
+    const right = parseShiftPreviewValue(shiftRight);
+    const rawStart = selectedRecord.mature_loc_start + left;
+    const rawEnd = selectedRecord.mature_loc_end + right;
+    const length = selectedRecord.pre_seq.length;
+    const clampedStart = Math.min(Math.max(1, rawStart), length);
+    const clampedEnd = Math.min(Math.max(1, rawEnd), length);
+
+    const highlightStart = Math.min(clampedStart, clampedEnd);
+    const highlightEnd = clampedStart >= clampedEnd ? clampedStart : clampedEnd;
+
+    return {
+      prefix: selectedRecord.pre_seq.slice(0, highlightStart - 1),
+      mature: selectedRecord.pre_seq.slice(highlightStart - 1, highlightEnd),
+      suffix: selectedRecord.pre_seq.slice(highlightEnd),
+      caretLine: buildCaretLine(length, clampedStart, clampedEnd),
+    };
   }, [selectedRecord, shiftLeft, shiftRight]);
 
   const shiftedMatureSequence = useMemo(() => {
@@ -188,7 +237,7 @@ export function StepOperation() {
         <h2 className="text-xl font-semibold text-zinc-900">Operations</h2>
         <p className="mt-1 text-sm text-zinc-600">
           Two optional sub-steps in sequence: Shift, then Modification. You may skip either one,
-          but cannot skip both.
+          or skip both.
         </p>
       </div>
 
@@ -206,9 +255,13 @@ export function StepOperation() {
             <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
               <p className="text-sm font-semibold text-zinc-900">Precursor sequence reference</p>
               <pre className="mt-2 overflow-x-auto rounded bg-white p-2 text-xs text-zinc-800">
-                {selectedRecord.pre_seq}
+                {precursorDisplay?.prefix}
+                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
+                  {precursorDisplay?.mature}
+                </span>
+                {precursorDisplay?.suffix}
                 {"\n"}
-                {shiftPreview}
+                {precursorDisplay?.caretLine ?? shiftPreview}
               </pre>
             </div>
           ) : null}
@@ -247,6 +300,15 @@ export function StepOperation() {
             <Alert
               color="danger"
               title="Shift requires both left and right integer values."
+              variant="flat"
+            />
+          ) : null}
+
+          {shiftBoundaryValidation.hasInvalidBoundary ? (
+            <Alert
+              color="danger"
+              title="Right boundary cannot be less than left boundary."
+              description={`Current shifted indices: left=${shiftBoundaryValidation.start}, right=${shiftBoundaryValidation.end}`}
               variant="flat"
             />
           ) : null}
@@ -358,15 +420,18 @@ export function StepOperation() {
           </Button>
 
           {operationState.hasInvalidModification ? (
-            <p className="text-sm font-medium text-red-600">
-              Invalid modification rows detected. Position must be an integer &gt;= 1 and
-              original/new base cannot be the same.
-            </p>
+            <Alert
+              color="danger"
+              title="Invalid modification rows detected."
+              description="Position must be an integer >= 1 and original/new base cannot be the same."
+              variant="flat"
+            />
           ) : null}
 
-          {!operationState.hasAtLeastOneOperation ? (
+          {shiftBoundaryValidation.hasInvalidBoundary ? (
             <p className="text-sm font-medium text-red-600">
-              At least one operation is required. You cannot skip both Shift and Modification.
+              Shift boundary is invalid: left index must be less than or equal to right index.
+              Go back to Shift and adjust values.
             </p>
           ) : null}
         </div>
@@ -381,7 +446,7 @@ export function StepOperation() {
             <Button
               color="primary"
               onPress={() => setOperationSubstep("modification")}
-              isDisabled={operationState.hasInvalidShift}
+              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary}
             >
               Next: Modification
             </Button>
@@ -391,7 +456,11 @@ export function StepOperation() {
             <Button variant="flat" onPress={() => setOperationSubstep("shift")}>
               Back: Shift
             </Button>
-            <Button color="primary" onPress={next} isDisabled={!operationState.isValid}>
+            <Button
+              color="primary"
+              onPress={next}
+              isDisabled={!operationState.isValid || shiftBoundaryValidation.hasInvalidBoundary}
+            >
               Next: Prediction Tools
             </Button>
           </>

@@ -16,7 +16,7 @@ export interface WizardConfig {
 
 export interface CreateJobPayload {
   mirna_id: string;
-  operation: OperationType;
+  operation?: OperationType;
   modifications: string[];
   shift: string | null;
   tools: string[];
