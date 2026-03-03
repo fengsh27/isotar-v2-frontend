@@ -15,17 +15,9 @@ type JobRow = {
   error?: string;
 };
 
-function formatDateTime(value?: string): string {
-  if (!value) {
-    return "-";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return value;
-  }
-
-  return date.toLocaleString();
+function formatDateTime(value?: number): string {
+  if (value === undefined || value === null) return "-";
+  return new Date(value * 1000).toLocaleString();
 }
 
 function jobStatus(row: JobRow): JobRecord["status"] | "unknown" {
@@ -220,7 +212,7 @@ export default function JobsPage() {
                       View
                     </Button>
                   </Link>
-                  {row.job?.status === "completed" ? (
+                  {row.job?.status === "succeeded" ? (
                     <Link href={`/jobs/${row.jobId}`}>
                       <Button as="span" size="sm" variant="flat">
                         Obtain Result
