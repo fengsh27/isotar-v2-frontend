@@ -16,6 +16,9 @@ type MirnaRecord = {
   mature_seq: string;
   mature_loc_start: number;
   mature_loc_end: number;
+  ext_pre_seq?: string;
+  ext_mature_loc_start?: number;
+  ext_mature_loc_end?: number;
 };
 
 type MirnaDataset = Record<string, MirnaRecord[]>;
@@ -122,8 +125,12 @@ export function StepOperation() {
 
   const operationState = evaluateOperationState(modifications, shiftLeft, shiftRight);
   const atShiftSubstep = operationSubstep === "shift";
+  const shiftReferenceSequence =
+    selectedRecord?.ext_pre_seq?.trim() || selectedRecord?.pre_seq || "";
+  const shiftBaseStart = selectedRecord?.ext_mature_loc_start ?? selectedRecord?.mature_loc_start;
+  const shiftBaseEnd = selectedRecord?.ext_mature_loc_end ?? selectedRecord?.mature_loc_end;
   const shiftBoundaryValidation = useMemo(() => {
-    if (!selectedRecord) {
+    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return { hasInvalidBoundary: false, start: null as number | null, end: null as number | null };
     }
 
@@ -133,22 +140,22 @@ export function StepOperation() {
       return { hasInvalidBoundary: false, start: null as number | null, end: null as number | null };
     }
 
-    const start = selectedRecord.mature_loc_start + left;
-    const end = selectedRecord.mature_loc_end + right;
+    const start = shiftBaseStart + left;
+    const end = shiftBaseEnd + right;
 
     return { hasInvalidBoundary: end < start, start, end };
-  }, [selectedRecord, shiftLeft, shiftRight]);
+  }, [selectedRecord, shiftBaseEnd, shiftBaseStart, shiftLeft, shiftRight]);
 
   const shiftPreview = useMemo(() => {
-    if (!selectedRecord) {
+    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return null;
     }
 
     const left = parseShiftPreviewValue(shiftLeft);
     const right = parseShiftPreviewValue(shiftRight);
-    const rawStart = selectedRecord.mature_loc_start + left;
-    const rawEnd = selectedRecord.mature_loc_end + right;
-    const length = selectedRecord.pre_seq.length;
+    const rawStart = shiftBaseStart + left;
+    const rawEnd = shiftBaseEnd + right;
+    const length = shiftReferenceSequence.length;
     const clampedStart = Math.min(Math.max(1, rawStart), length);
     const clampedEnd = Math.min(Math.max(1, rawEnd), length);
 
@@ -157,18 +164,18 @@ export function StepOperation() {
       clampedStart,
       clampedEnd,
     );
-  }, [selectedRecord, shiftLeft, shiftRight]);
+  }, [selectedRecord, shiftBaseEnd, shiftBaseStart, shiftLeft, shiftReferenceSequence, shiftRight]);
 
   const precursorDisplay = useMemo(() => {
-    if (!selectedRecord) {
+    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return null;
     }
 
     const left = parseShiftPreviewValue(shiftLeft);
     const right = parseShiftPreviewValue(shiftRight);
-    const rawStart = selectedRecord.mature_loc_start + left;
-    const rawEnd = selectedRecord.mature_loc_end + right;
-    const length = selectedRecord.pre_seq.length;
+    const rawStart = shiftBaseStart + left;
+    const rawEnd = shiftBaseEnd + right;
+    const length = shiftReferenceSequence.length;
     const clampedStart = Math.min(Math.max(1, rawStart), length);
     const clampedEnd = Math.min(Math.max(1, rawEnd), length);
 
@@ -176,23 +183,30 @@ export function StepOperation() {
     const highlightEnd = clampedStart >= clampedEnd ? clampedStart : clampedEnd;
 
     return {
-      prefix: selectedRecord.pre_seq.slice(0, highlightStart - 1),
-      mature: selectedRecord.pre_seq.slice(highlightStart - 1, highlightEnd),
-      suffix: selectedRecord.pre_seq.slice(highlightEnd),
+      prefix: shiftReferenceSequence.slice(0, highlightStart - 1),
+      mature: shiftReferenceSequence.slice(highlightStart - 1, highlightEnd),
+      suffix: shiftReferenceSequence.slice(highlightEnd),
       caretLine: buildCaretLine(length, clampedStart, clampedEnd),
     };
-  }, [selectedRecord, shiftLeft, shiftRight]);
+  }, [
+    selectedRecord,
+    shiftBaseEnd,
+    shiftBaseStart,
+    shiftLeft,
+    shiftReferenceSequence,
+    shiftRight,
+  ]);
 
   const shiftedMatureSequence = useMemo(() => {
-    if (!selectedRecord) {
+    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return null;
     }
 
     const left = parseShiftPreviewValue(shiftLeft);
     const right = parseShiftPreviewValue(shiftRight);
-    const rawStart = selectedRecord.mature_loc_start + left;
-    const rawEnd = selectedRecord.mature_loc_end + right;
-    const length = selectedRecord.pre_seq.length;
+    const rawStart = shiftBaseStart + left;
+    const rawEnd = shiftBaseEnd + right;
+    const length = shiftReferenceSequence.length;
     const clampedStart = Math.min(Math.max(1, rawStart), length);
     const clampedEnd = Math.min(Math.max(1, rawEnd), length);
 
@@ -201,11 +215,18 @@ export function StepOperation() {
     }
 
     return {
-      sequence: selectedRecord.pre_seq.slice(clampedStart - 1, clampedEnd),
+      sequence: shiftReferenceSequence.slice(clampedStart - 1, clampedEnd),
       start: clampedStart,
       end: clampedEnd,
     };
-  }, [selectedRecord, shiftLeft, shiftRight]);
+  }, [
+    selectedRecord,
+    shiftBaseEnd,
+    shiftBaseStart,
+    shiftLeft,
+    shiftReferenceSequence,
+    shiftRight,
+  ]);
 
   const modificationReferenceSeq = shiftedMatureSequence?.sequence ?? selectedRecord?.mature_seq ?? "";
 
@@ -253,7 +274,9 @@ export function StepOperation() {
 
           {selectedRecord ? (
             <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
-              <p className="text-sm font-semibold text-zinc-900">Precursor sequence reference</p>
+              <p className="text-sm font-semibold text-zinc-900">
+                Extended precursor sequence reference
+              </p>
               <pre className="mt-2 overflow-x-auto rounded bg-white p-2 text-xs text-zinc-800">
                 {precursorDisplay?.prefix}
                 <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
@@ -332,8 +355,8 @@ export function StepOperation() {
                 {shiftedMatureSequence?.sequence ?? selectedRecord.mature_seq}
               </code>
               <p className="mt-1 text-xs text-zinc-600">
-                Location: {shiftedMatureSequence?.start ?? selectedRecord.mature_loc_start}-
-                {shiftedMatureSequence?.end ?? selectedRecord.mature_loc_end}
+                Location: {shiftedMatureSequence?.start ?? shiftBaseStart}-
+                {shiftedMatureSequence?.end ?? shiftBaseEnd}
               </p>
             </div>
           ) : null}

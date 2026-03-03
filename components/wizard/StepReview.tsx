@@ -7,10 +7,12 @@ import { useRouter } from "next/navigation";
 import { createJob } from "@/lib/api";
 import { evaluateOperationState } from "@/lib/operation";
 import { SPECIES_OPTIONS, TOOL_OPTIONS } from "@/lib/constants";
+import { trackJobId } from "@/lib/jobStorage";
 import { useWizardStore } from "@/stores/wizardStore";
 
 function buildManifestPreview(args: {
   mirnaId: string;
+  preId: string;
   operationType?: string;
   modifications: string[];
   shift: string | null;
@@ -22,6 +24,7 @@ function buildManifestPreview(args: {
     input: {
       mirna: {
         id: args.mirnaId,
+        ...(args.preId ? { pre_id: args.preId } : {}),
       },
     },
     operation: args.operationType
@@ -49,6 +52,7 @@ export function StepReview() {
   const router = useRouter();
 
   const mirnaId = useWizardStore((state) => state.mirnaId);
+  const preId = useWizardStore((state) => state.preId);
   const humanReference = useWizardStore((state) => state.humanReference);
   const modifications = useWizardStore((state) => state.modifications);
   const shiftLeft = useWizardStore((state) => state.shiftLeft);
@@ -57,6 +61,7 @@ export function StepReview() {
   const species = useWizardStore((state) => state.species);
   const config = useWizardStore((state) => state.config);
   const back = useWizardStore((state) => state.back);
+  const reset = useWizardStore((state) => state.reset);
   const toJobPayload = useWizardStore((state) => state.toJobPayload);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,6 +75,7 @@ export function StepReview() {
 
   const manifestPreview = buildManifestPreview({
     mirnaId,
+    preId,
     operationType: opState.operationType,
     modifications: opState.formattedModifications,
     shift: opState.shift,
@@ -103,7 +109,9 @@ export function StepReview() {
 
     try {
       const job = await createJob(payload);
-      router.push(`/jobs/${job.job_id}`);
+      trackJobId(job.job_id);
+      reset();
+      router.replace(`/jobs/${job.job_id}`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -128,6 +136,11 @@ export function StepReview() {
         <p>
           <strong>miRNA:</strong> {mirnaId}
         </p>
+        {preId ? (
+          <p>
+            <strong>Precursor:</strong> {preId}
+          </p>
+        ) : null}
         <p>
           <strong>Operation mode:</strong> {opState.operationType ?? "Not set"}
         </p>

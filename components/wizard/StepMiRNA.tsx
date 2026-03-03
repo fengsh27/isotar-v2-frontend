@@ -20,6 +20,41 @@ type MirnaRecord = {
 
 type MirnaDataset = Record<string, MirnaRecord[]>;
 
+function getHighlightedSegments(
+  sequence: string,
+  start: number | undefined,
+  end: number | undefined,
+  matureSeq: string,
+): { prefix: string; mature: string; suffix: string } {
+  if (!sequence) {
+    return { prefix: "", mature: "", suffix: "" };
+  }
+
+  if (start !== undefined && end !== undefined) {
+    const safeStart = Math.max(1, Math.min(start, sequence.length));
+    const safeEnd = Math.max(1, Math.min(end, sequence.length));
+    const left = Math.min(safeStart, safeEnd);
+    const right = Math.max(safeStart, safeEnd);
+
+    return {
+      prefix: sequence.slice(0, left - 1),
+      mature: sequence.slice(left - 1, right),
+      suffix: sequence.slice(right),
+    };
+  }
+
+  const fallbackIndex = sequence.indexOf(matureSeq);
+  if (fallbackIndex === -1) {
+    return { prefix: sequence, mature: "", suffix: "" };
+  }
+
+  return {
+    prefix: sequence.slice(0, fallbackIndex),
+    mature: matureSeq,
+    suffix: sequence.slice(fallbackIndex + matureSeq.length),
+  };
+}
+
 function speciesFromMirnaId(mirnaId: string): string {
   const prefix = mirnaId.split("-")[0]?.toLowerCase() ?? "";
   const mapping: Record<string, string> = {
@@ -46,6 +81,7 @@ export function StepMiRNA() {
   const species = useWizardStore((state) => state.species);
   const mirnaId = useWizardStore((state) => state.mirnaId);
   const setMirnaId = useWizardStore((state) => state.setMirnaId);
+  const setPreId = useWizardStore((state) => state.setPreId);
   const setOperationSubstep = useWizardStore((state) => state.setOperationSubstep);
   const back = useWizardStore((state) => state.back);
   const next = useWizardStore((state) => state.next);
@@ -140,6 +176,26 @@ export function StepMiRNA() {
   const records = selectedId && dataset ? dataset[selectedId] ?? [] : [];
   const selectedRecord = records[selectedRecordIndex] ?? null;
 
+  useEffect(() => {
+    setPreId(selectedRecord?.pre_id ?? "");
+  }, [selectedRecord, setPreId]);
+  const precursorHighlight = selectedRecord
+    ? getHighlightedSegments(
+      selectedRecord.pre_seq,
+      selectedRecord.mature_loc_start,
+      selectedRecord.mature_loc_end,
+      selectedRecord.mature_seq,
+    )
+    : null;
+  const extPrecursorHighlight = selectedRecord
+    ? getHighlightedSegments(
+      selectedRecord.ext_pre_seq,
+      selectedRecord.ext_mature_loc_start,
+      selectedRecord.ext_mature_loc_end,
+      selectedRecord.mature_seq,
+    )
+    : null;
+
   const canProceed = Boolean(selectedId && selectedRecord);
   const copyButtonClass =
     copyState === "done"
@@ -154,6 +210,9 @@ export function StepMiRNA() {
     setSelectedRecordIndex(0);
     setMirnaId(id);
     setCopyState("idle");
+    if (dataset) {
+      setPreId(dataset[id]?.[0]?.pre_id ?? "");
+    }
   }
 
   async function copyMatureSequence() {
@@ -310,7 +369,11 @@ export function StepMiRNA() {
             <div>
               <p className="text-sm font-semibold text-zinc-800">Precursor sequence</p>
               <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
-                {selectedRecord.pre_seq}
+                {precursorHighlight?.prefix}
+                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
+                  {precursorHighlight?.mature}
+                </span>
+                {precursorHighlight?.suffix}
               </pre>
             </div>
 
@@ -318,6 +381,17 @@ export function StepMiRNA() {
               <strong>Extended mature location:</strong> {selectedRecord.ext_mature_loc_start}–
               {selectedRecord.ext_mature_loc_end}
             </p>
+
+            <div>
+              <p className="text-sm font-semibold text-zinc-800">Extended precursor sequence</p>
+              <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
+                {extPrecursorHighlight?.prefix}
+                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
+                  {extPrecursorHighlight?.mature}
+                </span>
+                {extPrecursorHighlight?.suffix}
+              </pre>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-3">

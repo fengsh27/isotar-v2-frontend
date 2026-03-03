@@ -8,8 +8,11 @@ import { useWizardStore } from "@/stores/wizardStore";
 export function StepTools() {
   const tools = useWizardStore((state) => state.tools);
   const toggleTool = useWizardStore((state) => state.toggleTool);
+  const setTools = useWizardStore((state) => state.setTools);
   const next = useWizardStore((state) => state.next);
   const back = useWizardStore((state) => state.back);
+  const allToolValues = TOOL_OPTIONS.map((tool) => tool.value);
+  const allSelected = allToolValues.length > 0 && allToolValues.every((tool) => tools.includes(tool));
 
   return (
     <section className="space-y-6">
@@ -27,7 +30,17 @@ export function StepTools() {
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-200 bg-zinc-50">
-                <th className="px-4 py-3 text-sm font-semibold text-zinc-800">Tool</th>
+                <th className="px-4 py-3 text-sm font-semibold text-zinc-800">
+                  <label className="inline-flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={() => setTools(allSelected ? [] : allToolValues)}
+                      className="h-4 w-4 rounded border-zinc-400 text-teal-700 focus:ring-teal-600"
+                    />
+                    Tool
+                  </label>
+                </th>
                 <th className="px-4 py-3 text-sm font-semibold text-zinc-800">Description</th>
               </tr>
             </thead>

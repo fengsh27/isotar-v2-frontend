@@ -5,7 +5,7 @@
 ### Core workflow
 ```
 
-miRNA → operation → prediction tools → species → configuration → job → results
+species → miRNA → operation → prediction tools → configuration → job → results
 
 ```
 
