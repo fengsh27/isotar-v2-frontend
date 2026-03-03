@@ -2,69 +2,68 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Chip, Spinner } from "@heroui/react";
+import { useRouter } from "next/navigation";
 
-import { getJob } from "@/lib/api";
+import { getJob, killJob } from "@/lib/api";
+import { untrackJobId } from "@/lib/jobStorage";
 import { JOB_STAGE_SEQUENCE, STATUS_COLOR } from "@/lib/constants";
-import type { JobRecord, JobStatusValue } from "@/lib/types";
+import type { JobRecord } from "@/lib/types";
 import { JobProgress } from "@/components/job/JobProgress";
-import { JobResults } from "@/components/job/JobResults";
 
-const TERMINAL_STATES: JobStatusValue[] = ["completed", "failed", "cancelled"];
+const TERMINAL_STATES: JobRecord["status"][] = ["succeeded", "failed", "killed"];
 
-function isTerminal(status: JobStatusValue): boolean {
+function isTerminal(status: JobRecord["status"]): boolean {
   return TERMINAL_STATES.includes(status);
 }
 
-function formatDateTime(value?: string): string {
-  if (!value) {
-    return "-";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return value;
-  }
-
-  return date.toLocaleString();
+function formatDateTime(value?: number): string {
+  if (value === undefined || value === null) return "-";
+  return new Date(value * 1000).toLocaleString();
 }
 
 function stageStates(job: JobRecord): Array<{ stage: string; state: "done" | "active" | "pending" }> {
-  const lowerStage = job.progress?.stage?.toLowerCase() ?? "";
-  const percent = job.progress?.percent ?? 0;
-
-  if (job.status === "completed") {
+  // JOB_STAGE_SEQUENCE = ["Processing", "Predicting"]
+  if (job.status === "succeeded") {
     return JOB_STAGE_SEQUENCE.map((stage) => ({ stage, state: "done" }));
   }
 
-  if (job.status === "failed" || job.status === "cancelled") {
+  if (job.status === "failed" || job.status === "killed") {
     return JOB_STAGE_SEQUENCE.map((stage, index) => ({
       stage,
       state: index === 0 ? "done" : "pending",
     }));
   }
 
-  const activeIndex = JOB_STAGE_SEQUENCE.findIndex((stage) =>
-    lowerStage.includes(stage.toLowerCase().split(" ")[0]),
-  );
-  const derivedIndex =
-    activeIndex >= 0 ? activeIndex : percent > 80 ? 3 : percent > 55 ? 2 : percent > 30 ? 1 : 0;
+  if (job.status === "running") {
+    if (job.step === "predicting") {
+      return JOB_STAGE_SEQUENCE.map((stage, index) => ({
+        stage,
+        state: index === 0 ? "done" : "active",
+      }));
+    }
+    // step === "processing" or step undefined
+    return JOB_STAGE_SEQUENCE.map((stage, index) => ({
+      stage,
+      state: index === 0 ? "active" : "pending",
+    }));
+  }
 
-  return JOB_STAGE_SEQUENCE.map((stage, index) => ({
-    stage,
-    state: index < derivedIndex ? "done" : index === derivedIndex ? "active" : "pending",
-  }));
+  // queued
+  return JOB_STAGE_SEQUENCE.map((stage) => ({ stage, state: "pending" }));
 }
 
 export function JobStatus({ jobId }: { jobId: string }) {
+  const router = useRouter();
   const [job, setJob] = useState<JobRecord | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isKilling, setIsKilling] = useState(false);
 
   const isFinished = useMemo(() => (job ? isTerminal(job.status) : false), [job]);
-  const percent = job?.progress?.percent;
+  const canKill = job?.status === "queued" || job?.status === "running";
   const statusTitle = job
     ? `${job.status.charAt(0).toUpperCase()}${job.status.slice(1)}${
-        typeof percent === "number" ? ` (${percent}%)` : ""
+        job.status === "running" && job.step ? ` — ${job.step}` : ""
       }`
     : "Loading";
 
@@ -122,9 +121,45 @@ export function JobStatus({ jobId }: { jobId: string }) {
             </p>
           </div>
           {job ? (
-            <Chip color={STATUS_COLOR[job.status]} variant="flat" className="capitalize">
-              {job.status}
-            </Chip>
+            <div className="flex flex-wrap items-center gap-2">
+              <Chip color={STATUS_COLOR[job.status]} variant="flat" className="capitalize">
+                {job.status}
+              </Chip>
+              {canKill ? (
+                <Button
+                  size="sm"
+                  color="danger"
+                  variant="flat"
+                  isLoading={isKilling}
+                  onPress={async () => {
+                    setIsKilling(true);
+                    setError("");
+                    try {
+                      const killed = await killJob(jobId);
+                      setJob((prev) => (prev ? { ...prev, status: killed.status } : null));
+                    } catch (killError) {
+                      setError(
+                        killError instanceof Error ? killError.message : "Unable to kill this job.",
+                      );
+                    } finally {
+                      setIsKilling(false);
+                    }
+                  }}
+                >
+                  Kill Job
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => {
+                  untrackJobId(jobId);
+                  router.push("/jobs");
+                }}
+              >
+                Remove from List
+              </Button>
+            </div>
           ) : null}
         </div>
 
@@ -176,38 +211,36 @@ export function JobStatus({ jobId }: { jobId: string }) {
               </p>
             ))}
           </div>
-          <div className="mt-4">
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={() => {
-                if (job.progress?.log_url) {
-                  window.open(job.progress.log_url, "_blank", "noopener,noreferrer");
-                }
-              }}
-              isDisabled={!job.progress?.log_url}
-            >
-              View logs
-            </Button>
-          </div>
         </section>
       ) : null}
 
       {job?.error ? (
         <Alert
           color="danger"
-          title={job.error.message}
-          description={job.error.details ?? "Job execution failed in the backend."}
+          title="Job failed"
+          description={job.error}
           variant="flat"
         />
       ) : null}
 
-      {job?.status === "completed" ? (
-        <JobResults results={job.results} />
+      {job?.status === "succeeded" && job.result_path ? (
+        <div className="surface-panel rounded-xl p-4">
+          <p className="mb-2 text-sm font-medium text-zinc-900">Results ready</p>
+          <Button
+            size="sm"
+            color="primary"
+            variant="flat"
+            onPress={() => {
+              window.open(job.result_path, "_blank", "noopener,noreferrer");
+            }}
+          >
+            Download Results (zip)
+          </Button>
+        </div>
       ) : (
         <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
           {isFinished
-            ? "Job finished without a completed result payload."
+            ? "Job finished without a result archive."
             : "Results will appear automatically when the job completes."}
         </div>
       )}

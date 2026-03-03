@@ -24,53 +24,53 @@ export const OPERATION_OPTIONS: {
   description: string;
   bullets: string[];
 }[] = [
-  {
-    value: "shift",
-    label: "Shift",
-    description: "Shift miRNA binding position before target prediction.",
-    bullets: ["Binding offset", "Seed move", "Positional exploration"],
-  },
-  {
-    value: "modification",
-    label: "Modification",
-    description: "Modify miRNA sequence context before target prediction.",
-    bullets: ["Sequence edit", "Mutation modeling", "Nucleotide modification"],
-  },
-];
+    {
+      value: "shift",
+      label: "Shift",
+      description: "Shift miRNA binding position before target prediction.",
+      bullets: ["Binding offset", "Seed move", "Positional exploration"],
+    },
+    {
+      value: "modification",
+      label: "Modification",
+      description: "Modify miRNA sequence context before target prediction.",
+      bullets: ["Sequence edit", "Mutation modeling", "Nucleotide modification"],
+    },
+  ];
 
 export const TOOL_OPTIONS = [
   {
-    value: "miranda",
+    value: "miRanda",
     label: "miRanda",
     description:
       "Scan for miRNA-mRNA complementarity using alignment, thermodynamics, and conservation.",
   },
   {
-    value: "mirmap",
+    value: "miRmap",
     label: "miRmap",
     description:
       "Predict and rank target repression strength with integrated scoring features.",
   },
   {
-    value: "targetscan",
+    value: "Targetscan",
     label: "TargetScan",
     description:
       "Predict conserved miRNA targets based on seed matching and repression context.",
   },
   {
-    value: "rnahybrid",
+    value: "RNAhybrid",
     label: "RNAhybrid",
     description:
       "Find energetically favorable miRNA-target duplexes (flexible parameter settings).",
   },
   {
-    value: "pita",
+    value: "PITA",
     label: "PITA",
     description:
       "Predict targets by accounting for site accessibility and hybrid free energy.",
   },
   {
-    value: "dmiso",
+    value: "DMISO",
     label: "DMISO",
     description:
       "Use deep learning to detect miRNA/isomiR-mRNA interactions with complex learned features.",
@@ -100,12 +100,7 @@ export const OUTPUT_FORMAT_OPTIONS = [
   { value: "extended", label: "Extended" },
 ] as const;
 
-export const JOB_STAGE_SEQUENCE = [
-  "miRNA preprocessing",
-  "TargetScan prediction",
-  "miRDB prediction",
-  "Aggregation",
-] as const;
+export const JOB_STAGE_SEQUENCE = ["Processing", "Predicting"] as const;
 
 export const STATUS_COLOR: Record<
   JobStatusValue,
@@ -113,7 +108,7 @@ export const STATUS_COLOR: Record<
 > = {
   queued: "warning",
   running: "primary",
-  completed: "success",
+  succeeded: "success",
   failed: "danger",
-  cancelled: "default",
+  killed: "default",
 };
