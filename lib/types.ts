@@ -3,9 +3,9 @@ export type OperationType = "shift" | "modification";
 export type JobStatusValue =
   | "queued"
   | "running"
-  | "succeeded"
+  | "completed"
   | "failed"
-  | "killed";
+  | "cancelled";
 
 export interface WizardConfig {
   cores: number;
@@ -16,12 +16,12 @@ export interface WizardConfig {
 
 export interface CreateJobPayload {
   mirna_id: string;
+  operation?: OperationType;
+  modifications: string[];
+  shift: string | null;
   tools: string[];
-  genome?: string;
-  cores?: number;
-  modifications?: string[];
-  shift?: string;
-  pre_id?: string;
+  species: string;
+  configuration: WizardConfig;
 }
 
 export interface MirnaValidationResponse {
@@ -38,30 +38,19 @@ export interface MirnaValidationResponse {
 
 export interface CreateJobResponse {
   job_id: string;
-  task_id: string;
-}
-
-export interface KillJobResponse {
-  job_id: string;
-  status: "killed";
-}
-
-export type JobStepValue = "processing" | "predicting";
-
-export type ToolProgressStatus = "pending" | "running" | "done";
-
-export interface ToolProgress {
-  status: ToolProgressStatus;
-  started_at: number | null;
-  finished_at: number | null;
 }
 
 export interface JobProgressInfo {
-  total_tools: number;
-  completed_tools: number;
-  current_tool: string;
-  updated_at: number;
-  tools_status: Record<string, ToolProgress>;
+  percent?: number;
+  stage?: string;
+  message?: string;
+  log_url?: string;
+}
+
+export interface JobErrorInfo {
+  code?: string;
+  message: string;
+  details?: string;
 }
 
 export type JsonRecord = Record<string, unknown>;
@@ -74,21 +63,15 @@ export interface JobResultsData {
 
 export interface JobRecord {
   job_id: string;
-  task_id: string;
   status: JobStatusValue;
-  step?: JobStepValue;
-  created_at?: number;
-  started_at?: number;
-  finished_at?: number;
-  genome?: string;
-  mirna_id?: string;
-  operations?: string[];
-  tools?: string[];
-  cores?: number;
-  result_path?: string;
-  error?: string;
+  created_at?: string;
+  started_at?: string;
+  finished_at?: string;
   progress?: JobProgressInfo;
-  modifications?: string[];
-  shift?: string | null;
-  pre_id?: string | null;
+  results?: JobResultsData;
+  error?: JobErrorInfo;
+}
+
+export interface JobsListResponse {
+  jobs: JobRecord[];
 }

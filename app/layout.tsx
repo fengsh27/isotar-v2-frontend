@@ -29,7 +29,7 @@ export default function RootLayout({
                   isoTar
                 </Link>
                 <nav className="flex items-center gap-1 rounded-xl border border-zinc-300 bg-[#e6eee2] p-1 text-sm text-zinc-700">
-                  <Link href="/run?new=1" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                  <Link href="/run" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     Run Analysis
                   </Link>
                   <Link href="/jobs" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">

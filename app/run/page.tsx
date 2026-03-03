@@ -1,5 +1,5 @@
-import { RunPageClient } from "@/components/wizard/RunPageClient";
+import { Wizard } from "@/components/wizard/Wizard";
 
 export default function RunPage() {
-  return <RunPageClient />;
+  return <Wizard />;
 }

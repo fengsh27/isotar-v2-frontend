@@ -7,7 +7,6 @@ interface WizardState {
   step: number;
   operationSubstep: "shift" | "modification";
   mirnaId: string;
-  preId: string;
   humanReference: "hg19" | "hg38" | "";
   modifications: ModificationInput[];
   shiftLeft: string;
@@ -20,7 +19,6 @@ interface WizardState {
     outputFormat: WizardConfig["outputFormat"];
   };
   setMirnaId: (mirnaId: string) => void;
-  setPreId: (preId: string) => void;
   setHumanReference: (humanReference: "hg19" | "hg38" | "") => void;
   setOperationSubstep: (operationSubstep: "shift" | "modification") => void;
   addModificationRow: () => void;
@@ -29,7 +27,6 @@ interface WizardState {
   setShiftLeft: (shiftLeft: string) => void;
   setShiftRight: (shiftRight: string) => void;
   toggleTool: (tool: string) => void;
-  setTools: (tools: string[]) => void;
   setSpecies: (species: string) => void;
   setCores: (cores: number) => void;
   setMaxRuntime: (maxRuntime: string) => void;
@@ -48,7 +45,6 @@ const initialState: Pick<
   | "step"
   | "operationSubstep"
   | "mirnaId"
-  | "preId"
   | "humanReference"
   | "modifications"
   | "shiftLeft"
@@ -60,7 +56,6 @@ const initialState: Pick<
   step: 0,
   operationSubstep: "shift",
   mirnaId: "",
-  preId: "",
   humanReference: "",
   modifications: [],
   shiftLeft: "",
@@ -68,7 +63,7 @@ const initialState: Pick<
   tools: [],
   species: "",
   config: {
-    cores: 1,
+    cores: 8,
     maxRuntime: "Default",
     outputFormat: "standard",
   },
@@ -77,7 +72,6 @@ const initialState: Pick<
 export const useWizardStore = create<WizardState>((set, get) => ({
   ...initialState,
   setMirnaId: (mirnaId) => set({ mirnaId }),
-  setPreId: (preId) => set({ preId }),
   setHumanReference: (humanReference) => set({ humanReference }),
   setOperationSubstep: (operationSubstep) => set({ operationSubstep }),
   addModificationRow: () =>
@@ -110,7 +104,6 @@ export const useWizardStore = create<WizardState>((set, get) => ({
         tools: exists ? state.tools.filter((item) => item !== tool) : [...state.tools, tool],
       };
     }),
-  setTools: (tools) => set({ tools }),
   setSpecies: (species) => set({ species }),
   setCores: (cores) =>
     set((state) => ({
@@ -154,33 +147,24 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       state.shiftRight,
     );
 
-    if (!state.mirnaId || !state.tools.length || !opState.isValid) {
+    if (!state.mirnaId || !state.species || !state.tools.length || !opState.isValid) {
       return null;
     }
 
-    const payload: CreateJobPayload = {
+    const referenceFile =
+      state.species === "9606" && state.humanReference ? state.humanReference : null;
+
+    return {
       mirna_id: state.mirnaId,
+      operation: opState.operationType,
+      modifications: opState.formattedModifications,
+      shift: opState.shift,
       tools: state.tools,
-      cores: state.config.cores,
+      species: state.species,
+      configuration: {
+        ...state.config,
+        referenceFile,
+      },
     };
-
-    // genome is only relevant for human; omit for other species (server defaults to "hg38")
-    if (state.species === "9606" && state.humanReference) {
-      payload.genome = state.humanReference;
-    }
-
-    if (opState.formattedModifications.length) {
-      payload.modifications = opState.formattedModifications;
-    }
-
-    if (opState.shift) {
-      payload.shift = opState.shift;
-    }
-
-    if (state.preId) {
-      payload.pre_id = state.preId;
-    }
-
-    return payload;
   },
 }));
