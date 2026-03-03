@@ -2,14 +2,10 @@ import type {
   CreateJobPayload,
   CreateJobResponse,
   JobRecord,
-  KillJobResponse,
+  JobsListResponse,
   MirnaValidationResponse,
 } from "@/lib/types";
 
-// When empty the browser sends relative requests (e.g. /api/v1/jobs), which are
-// transparently proxied to Flask by the Next.js rewrites in next.config.ts.
-// Set NEXT_PUBLIC_API_BASE only if you need to bypass the proxy (e.g. a separate
-// production deployment where the API lives on a different origin).
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
 class ApiError extends Error {
@@ -22,6 +18,10 @@ class ApiError extends Error {
 }
 
 function toUrl(path: string): string {
+  if (!API_BASE) {
+    return path;
+  }
+
   return `${API_BASE}${path}`;
 }
 
@@ -53,6 +53,10 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+export function getApiBase(): string {
+  return API_BASE;
+}
+
 export async function validateMiRNA(
   id: string,
 ): Promise<MirnaValidationResponse> {
@@ -73,49 +77,24 @@ export async function validateMiRNA(
 export async function createJob(
   payload: CreateJobPayload,
 ): Promise<CreateJobResponse> {
-  return fetchJson<CreateJobResponse>("/api/v1/jobs", {
+  return fetchJson<CreateJobResponse>("/jobs", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export async function getJob(jobId: string): Promise<JobRecord> {
-  return fetchJson<JobRecord>(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
-}
+export async function getJobs(): Promise<JobRecord[]> {
+  const data = await fetchJson<JobsListResponse | JobRecord[]>("/jobs");
 
-export async function killJob(jobId: string): Promise<KillJobResponse> {
-  return fetchJson<KillJobResponse>(
-    `/api/v1/jobs/${encodeURIComponent(jobId)}/kill`,
-    { method: "POST" },
-  );
-}
-
-export async function getJobResult(jobId: string): Promise<Blob> {
-  const response = await fetch(
-    toUrl(`/api/v1/jobs/${encodeURIComponent(jobId)}/result`),
-    { cache: "no-store" },
-  );
-
-  if (!response.ok) {
-    const text = await response.text();
-    let message = `Request failed (${response.status})`;
-    try {
-      const data = JSON.parse(text) as unknown;
-      if (
-        typeof data === "object" &&
-        data !== null &&
-        "message" in data &&
-        typeof (data as { message?: unknown }).message === "string"
-      ) {
-        message = (data as { message: string }).message;
-      }
-    } catch {
-      // non-JSON error body
-    }
-    throw new ApiError(message, response.status);
+  if (Array.isArray(data)) {
+    return data;
   }
 
-  return response.blob();
+  return data.jobs;
+}
+
+export async function getJob(jobId: string): Promise<JobRecord> {
+  return fetchJson<JobRecord>(`/jobs/${encodeURIComponent(jobId)}`);
 }
 
 export { ApiError };

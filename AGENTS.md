@@ -68,13 +68,16 @@ Allowed values:
 - `modification`
 
 Operations are:
-- Optional
+- Required
+- Mutually exclusive
 - Chosen **before** tools
+
+⚠️ Do not treat operations as optional flags.
 
 ---
 
 ### 4.3 Prediction Tools
-- Examples: `Targetscan`, `miRmap`, `miRanda`, `DMISO`, `PITA`, `RNAhybrid`
+- Examples: `targetscan`, `mirdb`, `mirwalk`
 - Multiple tools MAY be selected
 - Tool scores are preserved verbatim
 - Aggregation happens **after prediction**
@@ -119,7 +122,7 @@ operation:
   type: shift
 prediction:
   tools:
-    - name: Targetscan
+    - name: targetscan
       version: "8.0"
 species:
   taxonomy_id: 9606
