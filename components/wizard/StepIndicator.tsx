@@ -1,7 +1,7 @@
 "use client";
 
 import { evaluateOperationState } from "@/lib/operation";
-import { WIZARD_STEPS } from "@/lib/constants";
+import { WIZARD_STEPS_LNCRNA, WIZARD_STEPS_TARGET } from "@/lib/constants";
 import { useWizardStore } from "@/stores/wizardStore";
 
 export function StepIndicator() {
@@ -11,8 +11,10 @@ export function StepIndicator() {
   const modifications = useWizardStore((state) => state.modifications);
   const shiftLeft = useWizardStore((state) => state.shiftLeft);
   const shiftRight = useWizardStore((state) => state.shiftRight);
+  const workflow = useWizardStore((state) => state.workflow);
 
   const opState = evaluateOperationState(modifications, shiftLeft, shiftRight);
+  const wizardSteps = workflow === "mir-target" ? WIZARD_STEPS_TARGET : WIZARD_STEPS_LNCRNA;
 
   return (
     <div className="surface-panel rounded-3xl p-4">
@@ -20,7 +22,7 @@ export function StepIndicator() {
         Analysis Steps
       </h2>
       <ol className="space-y-2">
-        {WIZARD_STEPS.map((label, index) => {
+        {wizardSteps.map((label, index) => {
           const isCurrent = currentStep === index;
           const isComplete = currentStep > index;
           const isJumpable = isComplete;

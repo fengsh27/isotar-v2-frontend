@@ -1,10 +1,11 @@
 import { create } from "zustand";
 
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
-import type { CreateJobPayload, WizardConfig } from "@/lib/types";
+import type { CreateJobPayload, WizardConfig, WorkflowType } from "@/lib/types";
 
 interface WizardState {
   step: number;
+  workflow: WorkflowType;
   operationSubstep: "shift" | "modification";
   mirnaId: string;
   preId: string;
@@ -13,6 +14,7 @@ interface WizardState {
   shiftLeft: string;
   shiftRight: string;
   tools: string[];
+  targetGeneIds: string;
   species: string;
   config: {
     cores: WizardConfig["cores"];
@@ -30,7 +32,9 @@ interface WizardState {
   setShiftRight: (shiftRight: string) => void;
   toggleTool: (tool: string) => void;
   setTools: (tools: string[]) => void;
+  setTargetGeneIds: (ids: string) => void;
   setSpecies: (species: string) => void;
+  setWorkflow: (workflow: WorkflowType) => void;
   setCores: (cores: number) => void;
   setMaxRuntime: (maxRuntime: string) => void;
   setOutputFormat: (outputFormat: "standard" | "extended") => void;
@@ -41,11 +45,14 @@ interface WizardState {
   toJobPayload: () => CreateJobPayload | null;
 }
 
-const TOTAL_STEPS = 6;
+function totalSteps(wf: WorkflowType): number {
+  return wf === "mir-target" ? 7 : 6;
+}
 
 const initialState: Pick<
   WizardState,
   | "step"
+  | "workflow"
   | "operationSubstep"
   | "mirnaId"
   | "preId"
@@ -54,10 +61,12 @@ const initialState: Pick<
   | "shiftLeft"
   | "shiftRight"
   | "tools"
+  | "targetGeneIds"
   | "species"
   | "config"
 > = {
   step: 0,
+  workflow: "mir-lncrna",
   operationSubstep: "shift",
   mirnaId: "",
   preId: "",
@@ -66,6 +75,7 @@ const initialState: Pick<
   shiftLeft: "",
   shiftRight: "",
   tools: [],
+  targetGeneIds: "",
   species: "",
   config: {
     cores: 1,
@@ -111,7 +121,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       };
     }),
   setTools: (tools) => set({ tools }),
+  setTargetGeneIds: (targetGeneIds) => set({ targetGeneIds }),
   setSpecies: (species) => set({ species }),
+  setWorkflow: (workflow) => set({ workflow }),
   setCores: (cores) =>
     set((state) => ({
       config: {
@@ -134,12 +146,12 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       },
     })),
   goToStep: (step) =>
-    set({
-      step: Math.min(Math.max(step, 0), TOTAL_STEPS - 1),
-    }),
+    set((state) => ({
+      step: Math.min(Math.max(step, 0), totalSteps(state.workflow) - 1),
+    })),
   next: () =>
     set((state) => ({
-      step: Math.min(state.step + 1, TOTAL_STEPS - 1),
+      step: Math.min(state.step + 1, totalSteps(state.workflow) - 1),
     })),
   back: () =>
     set((state) => ({
@@ -161,6 +173,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
     const payload: CreateJobPayload = {
       mirna_id: state.mirnaId,
       tools: state.tools,
+      workflow: state.workflow,
       cores: state.config.cores,
     };
 
@@ -179,6 +192,13 @@ export const useWizardStore = create<WizardState>((set, get) => ({
 
     if (state.preId) {
       payload.pre_id = state.preId;
+    }
+
+    if (state.workflow === "mir-target" && state.targetGeneIds.trim()) {
+      payload.target_gene_ids = state.targetGeneIds
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     }
 
     return payload;

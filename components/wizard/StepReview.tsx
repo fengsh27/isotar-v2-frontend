@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { createJob } from "@/lib/api";
 import { evaluateOperationState } from "@/lib/operation";
-import { SPECIES_OPTIONS, TOOL_OPTIONS } from "@/lib/constants";
+import { SPECIES_OPTIONS, TOOL_OPTIONS, WORKFLOW_LABELS } from "@/lib/constants";
 import { trackJobId } from "@/lib/jobStorage";
 import { useWizardStore } from "@/stores/wizardStore";
 
@@ -19,8 +19,11 @@ function buildManifestPreview(args: {
   tools: string[];
   species: string;
   config: { cores: number; maxRuntime: string; outputFormat: "standard" | "extended" };
+  workflow: string;
+  targetGeneIds?: string[];
 }) {
   return {
+    workflow: args.workflow,
     input: {
       mirna: {
         id: args.mirnaId,
@@ -38,6 +41,7 @@ function buildManifestPreview(args: {
     },
     prediction: {
       tools: args.tools.map((tool) => ({ name: tool })),
+      ...(args.targetGeneIds?.length ? { target_gene_ids: args.targetGeneIds } : {}),
     },
     species: {
       taxonomy_id: args.species,
@@ -58,7 +62,9 @@ export function StepReview() {
   const shiftLeft = useWizardStore((state) => state.shiftLeft);
   const shiftRight = useWizardStore((state) => state.shiftRight);
   const tools = useWizardStore((state) => state.tools);
+  const targetGeneIds = useWizardStore((state) => state.targetGeneIds);
   const species = useWizardStore((state) => state.species);
+  const workflow = useWizardStore((state) => state.workflow);
   const config = useWizardStore((state) => state.config);
   const back = useWizardStore((state) => state.back);
   const reset = useWizardStore((state) => state.reset);
@@ -73,6 +79,14 @@ export function StepReview() {
   const speciesLabel =
     SPECIES_OPTIONS.find((option) => option.value === species)?.subtitle ?? species;
 
+  const parsedTargetGeneIds =
+    workflow === "mir-target"
+      ? targetGeneIds
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+
   const manifestPreview = buildManifestPreview({
     mirnaId,
     preId,
@@ -82,6 +96,8 @@ export function StepReview() {
     tools,
     species,
     config,
+    workflow,
+    targetGeneIds: parsedTargetGeneIds.length ? parsedTargetGeneIds : undefined,
   });
 
   function downloadManifest() {
@@ -133,6 +149,9 @@ export function StepReview() {
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-zinc-200 bg-white/70 p-4 text-sm">
+        <p>
+          <strong>Workflow:</strong> {WORKFLOW_LABELS[workflow]}
+        </p>
         <p>
           <strong>miRNA:</strong> {mirnaId}
         </p>
@@ -194,6 +213,12 @@ export function StepReview() {
             );
           })}
         </div>
+        {workflow === "mir-target" ? (
+          <p>
+            <strong>Target gene IDs:</strong>{" "}
+            {parsedTargetGeneIds.length ? parsedTargetGeneIds.join(", ") : "None (all targets)"}
+          </p>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">

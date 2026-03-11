@@ -1,6 +1,6 @@
-import type { JobStatusValue, OperationType } from "@/lib/types";
+import type { JobStatusValue, OperationType, WorkflowType } from "@/lib/types";
 
-export const WIZARD_STEPS = [
+export const WIZARD_STEPS_LNCRNA = [
   "Species",
   "miRNA",
   "Operation",
@@ -9,6 +9,19 @@ export const WIZARD_STEPS = [
   "Review & Run",
 ] as const;
 
+export const WIZARD_STEPS_TARGET = [
+  "Species",
+  "miRNA",
+  "Operation",
+  "Prediction Tools",
+  "Select Target",
+  "Configuration",
+  "Review & Run",
+] as const;
+
+// Alias for backwards compatibility
+export const WIZARD_STEPS = WIZARD_STEPS_LNCRNA;
+
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
   1: "Choose one miRNA identifier from the available list for the selected species.",
@@ -16,6 +29,18 @@ export const STEP_CONTEXT: Record<number, string> = {
   3: "Select one or more prediction tools. Tool outputs are preserved as reported by each tool.",
   4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
   5: "Review your run request, then start an immutable asynchronous job.",
+};
+
+export const STEP_CONTEXT_TARGET: Record<number, string> = {
+  ...STEP_CONTEXT,
+  4: "Optionally filter predictions to specific gene targets. Enter one or more gene IDs or symbols (e.g. TP53, ENSG00000141510), comma-separated. Leave blank to run against all predicted targets.",
+  5: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
+  6: "Review your run request, then start an immutable asynchronous job.",
+};
+
+export const WORKFLOW_LABELS: Record<WorkflowType, string> = {
+  "mir-target": "miR-Target Prediction",
+  "mir-lncrna": "miR-LncRNA Prediction",
 };
 
 export const OPERATION_OPTIONS: {

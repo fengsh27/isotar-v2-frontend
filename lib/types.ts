@@ -1,5 +1,7 @@
 export type OperationType = "shift" | "modification";
 
+export type WorkflowType = "mir-target" | "mir-lncrna";
+
 export type JobStatusValue =
   | "queued"
   | "running"
@@ -17,11 +19,13 @@ export interface WizardConfig {
 export interface CreateJobPayload {
   mirna_id: string;
   tools: string[];
+  workflow: WorkflowType;
   genome?: string;
   cores?: number;
   modifications?: string[];
   shift?: string;
   pre_id?: string;
+  target_gene_ids?: string[];
 }
 
 export interface MirnaValidationResponse {

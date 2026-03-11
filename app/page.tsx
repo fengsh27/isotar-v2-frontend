@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Button, Card, CardBody, CardHeader } from "@heroui/react";
+import { Button, Card, CardBody, CardHeader, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from "@heroui/react";
 
 export default function Home() {
   const router = useRouter();
@@ -34,12 +34,24 @@ export default function Home() {
         </div>
 
         <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <Button
-            onPress={() => router.push("/run")}
-            className="h-11 rounded-xl bg-teal-700 px-5 font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:bg-teal-800 hover:shadow-xl hover:shadow-teal-900/20 active:scale-[0.98]"
-          >
-            Run isoTar analysis
-          </Button>
+          <Dropdown>
+            <DropdownTrigger>
+              <Button className="h-11 rounded-xl bg-teal-700 px-5 font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:bg-teal-800 hover:shadow-xl hover:shadow-teal-900/20 active:scale-[0.98]">
+                Run isoTar analysis
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label="Select analysis workflow"
+              onAction={(key) => router.push(key as string)}
+            >
+              <DropdownItem key="/run?workflow=mir-target&new=1">
+                miR-Target Prediction
+              </DropdownItem>
+              <DropdownItem key="/run?workflow=mir-lncrna&new=1">
+                miR-LncRNA Prediction
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
           <Button
             onPress={() => router.push("/docs")}
             className="h-11 rounded-xl border border-teal-700 bg-white/90 px-5 font-semibold text-teal-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:bg-teal-50 hover:shadow-lg hover:shadow-teal-900/10 active:scale-[0.98]"
@@ -163,12 +175,24 @@ export default function Home() {
       </section> */}
 
       <section className="pt-2 text-center">
-        <Button
-          onPress={() => router.push("/run")}
-          className="h-11 rounded-xl bg-teal-700 px-6 font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:bg-teal-800 hover:shadow-xl hover:shadow-teal-900/20 active:scale-[0.98]"
-        >
-          Start isoTar analysis
-        </Button>
+        <Dropdown>
+          <DropdownTrigger>
+            <Button className="h-11 rounded-xl bg-teal-700 px-6 font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:bg-teal-800 hover:shadow-xl hover:shadow-teal-900/20 active:scale-[0.98]">
+              Start isoTar analysis
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label="Select analysis workflow"
+            onAction={(key) => router.push(key as string)}
+          >
+            <DropdownItem key="/run?workflow=mir-target&new=1">
+              miR-Target Prediction
+            </DropdownItem>
+            <DropdownItem key="/run?workflow=mir-lncrna&new=1">
+              miR-LncRNA Prediction
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
       </section>
     </div>
   );
