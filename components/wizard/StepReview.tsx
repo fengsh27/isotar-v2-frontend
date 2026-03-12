@@ -12,6 +12,8 @@ import { useWizardStore } from "@/stores/wizardStore";
 
 function buildManifestPreview(args: {
   mirnaId: string;
+  customMirnaSeq?: string;
+  useCustomMirnaSeq: boolean;
   preId: string;
   operationType?: string;
   modifications: string[];
@@ -25,20 +27,24 @@ function buildManifestPreview(args: {
   return {
     workflow: args.workflow,
     input: {
-      mirna: {
-        id: args.mirnaId,
-        ...(args.preId ? { pre_id: args.preId } : {}),
-      },
+      mirna: args.useCustomMirnaSeq
+        ? { seq: args.customMirnaSeq?.replace(/\s/g, "").toUpperCase() }
+        : {
+            id: args.mirnaId,
+            ...(args.preId ? { pre_id: args.preId } : {}),
+          },
     },
-    operation: args.operationType
-      ? {
-          type: args.operationType,
-        }
-      : undefined,
-    transformations: {
-      modifications: args.modifications,
-      shift: args.shift,
-    },
+    operation: args.useCustomMirnaSeq
+      ? undefined
+      : args.operationType
+        ? { type: args.operationType }
+        : undefined,
+    transformations: args.useCustomMirnaSeq
+      ? undefined
+      : {
+          modifications: args.modifications,
+          shift: args.shift,
+        },
     prediction: {
       tools: args.tools.map((tool) => ({ name: tool })),
       ...(args.targetGeneIds?.length ? { target_gene_ids: args.targetGeneIds } : {}),
@@ -56,6 +62,8 @@ export function StepReview() {
   const router = useRouter();
 
   const mirnaId = useWizardStore((state) => state.mirnaId);
+  const customMirnaSeq = useWizardStore((state) => state.customMirnaSeq);
+  const useCustomMirnaSeq = useWizardStore((state) => state.useCustomMirnaSeq);
   const preId = useWizardStore((state) => state.preId);
   const humanReference = useWizardStore((state) => state.humanReference);
   const modifications = useWizardStore((state) => state.modifications);
@@ -89,6 +97,8 @@ export function StepReview() {
 
   const manifestPreview = buildManifestPreview({
     mirnaId,
+    customMirnaSeq,
+    useCustomMirnaSeq,
     preId,
     operationType: opState.operationType,
     modifications: opState.formattedModifications,
@@ -152,37 +162,55 @@ export function StepReview() {
         <p>
           <strong>Workflow:</strong> {WORKFLOW_LABELS[workflow]}
         </p>
-        <p>
-          <strong>miRNA:</strong> {mirnaId}
-        </p>
-        {preId ? (
+        {useCustomMirnaSeq ? (
+          <div>
+            <p><strong>miRNA:</strong> <span className="font-mono text-xs">(custom sequence)</span></p>
+            <code className="mt-1 inline-block break-all rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-900">
+              {customMirnaSeq.replace(/\s/g, "").toUpperCase()}
+            </code>
+          </div>
+        ) : (
+          <p>
+            <strong>miRNA:</strong> {mirnaId}
+          </p>
+        )}
+        {!useCustomMirnaSeq && preId ? (
           <p>
             <strong>Precursor:</strong> {preId}
           </p>
         ) : null}
-        <p>
-          <strong>Operation mode:</strong> {opState.operationType ?? "Not set"}
-        </p>
-
-        <div className="space-y-1">
+        {!useCustomMirnaSeq ? (
           <p>
-            <strong>Modification:</strong>
+            <strong>Operation mode:</strong> {opState.operationType ?? "Not set"}
           </p>
-          {opState.formattedModifications.length ? (
-            opState.formattedModifications.map((mod) => (
-              <p key={mod} className="pl-3 text-zinc-700">
-                • {mod.replace(":", ": ").replace("|", " → ")}
-              </p>
-            ))
-          ) : (
-            <p className="pl-3 text-zinc-600">None</p>
-          )}
-        </div>
+        ) : (
+          <p>
+            <strong>Operation:</strong> <span className="text-zinc-500">skipped (custom sequence)</span>
+          </p>
+        )}
 
-        <p>
-          <strong>Shift:</strong>{" "}
-          {opState.shift ? opState.shift.replace("|", " | ") : "None"}
-        </p>
+        {!useCustomMirnaSeq ? (
+          <>
+            <div className="space-y-1">
+              <p>
+                <strong>Modification:</strong>
+              </p>
+              {opState.formattedModifications.length ? (
+                opState.formattedModifications.map((mod) => (
+                  <p key={mod} className="pl-3 text-zinc-700">
+                    • {mod.replace(":", ": ").replace("|", " → ")}
+                  </p>
+                ))
+              ) : (
+                <p className="pl-3 text-zinc-600">None</p>
+              )}
+            </div>
+            <p>
+              <strong>Shift:</strong>{" "}
+              {opState.shift ? opState.shift.replace("|", " | ") : "None"}
+            </p>
+          </>
+        ) : null}
 
         <p>
           <strong>Species:</strong> {speciesLabel}

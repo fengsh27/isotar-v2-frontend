@@ -12,6 +12,7 @@ export function StepIndicator() {
   const shiftLeft = useWizardStore((state) => state.shiftLeft);
   const shiftRight = useWizardStore((state) => state.shiftRight);
   const workflow = useWizardStore((state) => state.workflow);
+  const useCustomMirnaSeq = useWizardStore((state) => state.useCustomMirnaSeq);
 
   const opState = evaluateOperationState(modifications, shiftLeft, shiftRight);
   const wizardSteps = workflow === "mir-target" ? WIZARD_STEPS_TARGET : WIZARD_STEPS_LNCRNA;
@@ -23,9 +24,10 @@ export function StepIndicator() {
       </h2>
       <ol className="space-y-2">
         {wizardSteps.map((label, index) => {
+          const isOperationSkipped = useCustomMirnaSeq && index === 2;
           const isCurrent = currentStep === index;
           const isComplete = currentStep > index;
-          const isJumpable = isComplete;
+          const isJumpable = isComplete && !isOperationSkipped;
 
           return (
             <li
@@ -56,16 +58,23 @@ export function StepIndicator() {
                 <span
                   className={`text-sm ${isCurrent
                     ? "font-semibold text-zinc-900"
-                    : isComplete
-                      ? "text-emerald-700"
-                      : "text-zinc-400"
+                    : isOperationSkipped
+                      ? "text-zinc-400 line-through"
+                      : isComplete
+                        ? "text-emerald-700"
+                        : "text-zinc-400"
                     }`}
                 >
                   {label}
                 </span>
+                {isOperationSkipped ? (
+                  <span className="ml-1 rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] text-zinc-500">
+                    skipped
+                  </span>
+                ) : null}
               </button>
 
-              {index === 2 ? (
+              {index === 2 && !isOperationSkipped ? (
                 <div className="mt-2 space-y-1 pl-8 text-xs">
                   <p
                     className={

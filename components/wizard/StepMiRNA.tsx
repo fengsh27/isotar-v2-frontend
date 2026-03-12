@@ -77,10 +77,20 @@ function toFasta(id: string, record: MirnaRecord): string {
   ].join("\n");
 }
 
+const RNA_SEQ_RE = /^[ACGUacguTt\s]+$/;
+
+function normalizeSeq(seq: string) {
+  return seq.replace(/\s/g, "").toUpperCase();
+}
+
 export function StepMiRNA() {
   const species = useWizardStore((state) => state.species);
   const mirnaId = useWizardStore((state) => state.mirnaId);
   const setMirnaId = useWizardStore((state) => state.setMirnaId);
+  const customMirnaSeq = useWizardStore((state) => state.customMirnaSeq);
+  const setCustomMirnaSeq = useWizardStore((state) => state.setCustomMirnaSeq);
+  const useCustomMirnaSeq = useWizardStore((state) => state.useCustomMirnaSeq);
+  const setUseCustomMirnaSeq = useWizardStore((state) => state.setUseCustomMirnaSeq);
   const setPreId = useWizardStore((state) => state.setPreId);
   const setOperationSubstep = useWizardStore((state) => state.setOperationSubstep);
   const back = useWizardStore((state) => state.back);
@@ -196,13 +206,29 @@ export function StepMiRNA() {
     )
     : null;
 
-  const canProceed = Boolean(selectedId && selectedRecord);
+  const normalizedCustomSeq = normalizeSeq(customMirnaSeq);
+  const customSeqValid = normalizedCustomSeq.length > 0 && RNA_SEQ_RE.test(customMirnaSeq);
+  const customSeqHasInvalidChars = customMirnaSeq.trim().length > 0 && !RNA_SEQ_RE.test(customMirnaSeq);
+
+  const canProceed = useCustomMirnaSeq ? customSeqValid : Boolean(selectedId && selectedRecord);
   const copyButtonClass =
     copyState === "done"
       ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
       : copyState === "error"
         ? "border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
         : "border-teal-200 bg-white text-teal-800 hover:bg-teal-50";
+
+  function switchToMode(custom: boolean) {
+    setUseCustomMirnaSeq(custom);
+    if (custom) {
+      setMirnaId("");
+      setPreId("");
+      setQuery("");
+      setSelectedId("");
+    } else {
+      setCustomMirnaSeq("");
+    }
+  }
 
   function chooseMirna(id: string) {
     setQuery(id);
@@ -249,13 +275,61 @@ export function StepMiRNA() {
       <div>
         <h2 className="text-xl font-semibold text-zinc-900">Select miRNA</h2>
         <p className="mt-1 text-sm text-zinc-600">
-          Choose a miRNA ID from the reference catalog. You can type to filter and select.
+          Choose a miRNA from the reference catalog, or paste your own sequence.
         </p>
+      </div>
+
+      {/* Mode toggle */}
+      <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-100 p-1 text-sm">
+        <button
+          type="button"
+          onClick={() => switchToMode(false)}
+          className={`rounded-lg px-4 py-1.5 font-medium transition-colors ${!useCustomMirnaSeq ? "bg-white text-teal-700 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+        >
+          From Catalog
+        </button>
+        <button
+          type="button"
+          onClick={() => switchToMode(true)}
+          className={`rounded-lg px-4 py-1.5 font-medium transition-colors ${useCustomMirnaSeq ? "bg-white text-teal-700 shadow-sm" : "text-zinc-500 hover:text-zinc-800"}`}
+        >
+          Custom Sequence
+        </button>
       </div>
 
       {loadError ? <Alert color="danger" title={loadError} variant="flat" /> : null}
 
-      {!dataset ? (
+      {useCustomMirnaSeq ? (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-zinc-300 bg-zinc-100 px-3 py-2 transition-colors focus-within:border-zinc-400 focus-within:bg-white">
+            <label htmlFor="custom-mirna-seq" className="text-sm text-zinc-500">
+              miRNA sequence
+            </label>
+            <textarea
+              id="custom-mirna-seq"
+              rows={3}
+              placeholder="e.g. UGAGGUAGUAGGUUGUAUAGUU"
+              value={customMirnaSeq}
+              onChange={(e) => setCustomMirnaSeq(e.target.value)}
+              className="w-full resize-none border-0 bg-transparent p-0 font-mono text-base text-zinc-700 placeholder:text-zinc-400 focus:outline-none"
+            />
+          </div>
+          {customSeqHasInvalidChars ? (
+            <p className="text-xs text-red-600">
+              Sequence contains invalid characters. Use A, C, G, U (RNA) or T (DNA) only.
+            </p>
+          ) : normalizedCustomSeq.length > 0 ? (
+            <p className="text-xs text-zinc-500">
+              {normalizedCustomSeq.length} nt · Operation step will be skipped for custom sequences.
+            </p>
+          ) : (
+            <p className="text-xs text-zinc-500">
+              RNA or DNA sequence. Spaces and line breaks are ignored.
+              Operation step will be skipped.
+            </p>
+          )}
+        </div>
+      ) : !dataset ? (
         <div className="flex items-center gap-2 text-sm text-zinc-600">
           <Spinner size="sm" /> Loading miRNA dataset...
         </div>
@@ -317,7 +391,7 @@ export function StepMiRNA() {
         </div>
       )}
 
-      {selectedRecord && selectedId ? (
+      {!useCustomMirnaSeq && selectedRecord && selectedId ? (
         <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white/80 p-4">
           {records.length > 1 ? (
             <div className="space-y-1">
@@ -422,12 +496,12 @@ export function StepMiRNA() {
         <Button
           color="primary"
           onPress={() => {
-            setOperationSubstep("shift");
+            if (!useCustomMirnaSeq) setOperationSubstep("shift");
             next();
           }}
           isDisabled={!canProceed}
         >
-          Next: Operation
+          {useCustomMirnaSeq ? "Next: Prediction Tools" : "Next: Operation"}
         </Button>
       </div>
     </section>

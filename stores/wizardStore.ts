@@ -8,6 +8,8 @@ interface WizardState {
   workflow: WorkflowType;
   operationSubstep: "shift" | "modification";
   mirnaId: string;
+  customMirnaSeq: string;
+  useCustomMirnaSeq: boolean;
   preId: string;
   humanReference: "hg19" | "hg38" | "";
   modifications: ModificationInput[];
@@ -22,6 +24,8 @@ interface WizardState {
     outputFormat: WizardConfig["outputFormat"];
   };
   setMirnaId: (mirnaId: string) => void;
+  setCustomMirnaSeq: (seq: string) => void;
+  setUseCustomMirnaSeq: (use: boolean) => void;
   setPreId: (preId: string) => void;
   setHumanReference: (humanReference: "hg19" | "hg38" | "") => void;
   setOperationSubstep: (operationSubstep: "shift" | "modification") => void;
@@ -55,6 +59,8 @@ const initialState: Pick<
   | "workflow"
   | "operationSubstep"
   | "mirnaId"
+  | "customMirnaSeq"
+  | "useCustomMirnaSeq"
   | "preId"
   | "humanReference"
   | "modifications"
@@ -69,6 +75,8 @@ const initialState: Pick<
   workflow: "mir-lncrna",
   operationSubstep: "shift",
   mirnaId: "",
+  customMirnaSeq: "",
+  useCustomMirnaSeq: false,
   preId: "",
   humanReference: "",
   modifications: [],
@@ -87,6 +95,8 @@ const initialState: Pick<
 export const useWizardStore = create<WizardState>((set, get) => ({
   ...initialState,
   setMirnaId: (mirnaId) => set({ mirnaId }),
+  setCustomMirnaSeq: (customMirnaSeq) => set({ customMirnaSeq }),
+  setUseCustomMirnaSeq: (useCustomMirnaSeq) => set({ useCustomMirnaSeq }),
   setPreId: (preId) => set({ preId }),
   setHumanReference: (humanReference) => set({ humanReference }),
   setOperationSubstep: (operationSubstep) => set({ operationSubstep }),
@@ -150,13 +160,17 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       step: Math.min(Math.max(step, 0), totalSteps(state.workflow) - 1),
     })),
   next: () =>
-    set((state) => ({
-      step: Math.min(state.step + 1, totalSteps(state.workflow) - 1),
-    })),
+    set((state) => {
+      // Skip Operation step (index 2) when using a custom miRNA sequence
+      const increment = state.useCustomMirnaSeq && state.step === 1 ? 2 : 1;
+      return { step: Math.min(state.step + increment, totalSteps(state.workflow) - 1) };
+    }),
   back: () =>
-    set((state) => ({
-      step: Math.max(state.step - 1, 0),
-    })),
+    set((state) => {
+      // Skip Operation step (index 2) when using a custom miRNA sequence
+      const decrement = state.useCustomMirnaSeq && state.step === 3 ? 2 : 1;
+      return { step: Math.max(state.step - decrement, 0) };
+    }),
   reset: () => set({ ...initialState }),
   toJobPayload: () => {
     const state = get();
@@ -166,16 +180,26 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       state.shiftRight,
     );
 
-    if (!state.mirnaId || !state.tools.length || !opState.isValid) {
+    const hasMirna = state.useCustomMirnaSeq
+      ? Boolean(state.customMirnaSeq.trim())
+      : Boolean(state.mirnaId);
+    const operationValid = state.useCustomMirnaSeq || opState.isValid;
+
+    if (!hasMirna || !state.tools.length || !operationValid) {
       return null;
     }
 
     const payload: CreateJobPayload = {
-      mirna_id: state.mirnaId,
       tools: state.tools,
       workflow: state.workflow,
       cores: state.config.cores,
     };
+
+    if (state.useCustomMirnaSeq) {
+      payload.mirna_seq = state.customMirnaSeq.trim().toUpperCase();
+    } else {
+      payload.mirna_id = state.mirnaId;
+    }
 
     // genome is only relevant for human; omit for other species (server defaults to "hg38")
     if (state.species === "9606" && state.humanReference) {
@@ -190,7 +214,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       payload.shift = opState.shift;
     }
 
-    if (state.preId) {
+    if (!state.useCustomMirnaSeq && state.preId) {
       payload.pre_id = state.preId;
     }
 

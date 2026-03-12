@@ -9,6 +9,7 @@ import { untrackJobId } from "@/lib/jobStorage";
 import { JOB_STAGE_SEQUENCE, STATUS_COLOR } from "@/lib/constants";
 import type { JobRecord } from "@/lib/types";
 import { JobProgress } from "@/components/job/JobProgress";
+import { JobResults } from "@/components/job/JobResults";
 
 const TERMINAL_STATES: JobRecord["status"][] = ["succeeded", "failed", "killed"];
 
@@ -223,20 +224,8 @@ export function JobStatus({ jobId }: { jobId: string }) {
         />
       ) : null}
 
-      {job?.status === "succeeded" && job.result_path ? (
-        <div className="surface-panel rounded-xl p-4">
-          <p className="mb-2 text-sm font-medium text-zinc-900">Results ready</p>
-          <Button
-            size="sm"
-            color="primary"
-            variant="flat"
-            onPress={() => {
-              window.open(job.result_path, "_blank", "noopener,noreferrer");
-            }}
-          >
-            Download Results (zip)
-          </Button>
-        </div>
+      {job?.status === "succeeded" ? (
+        <JobResults jobId={jobId} />
       ) : (
         <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
           {isFinished

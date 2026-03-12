@@ -13,7 +13,7 @@ export function StepTarget() {
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-900">Select Target</h2>
+        <h2 className="text-xl font-semibold text-zinc-900">Select Target <span className="text-base font-normal text-zinc-600">— Optional</span></h2>
         <p className="mt-1 text-sm text-zinc-600">
           Optionally filter predictions to specific gene targets.
         </p>

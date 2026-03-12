@@ -17,7 +17,8 @@ export interface WizardConfig {
 }
 
 export interface CreateJobPayload {
-  mirna_id: string;
+  mirna_id?: string;
+  mirna_seq?: string;
   tools: string[];
   workflow: WorkflowType;
   genome?: string;
@@ -74,6 +75,37 @@ export interface JobResultsData {
   summary?: JsonRecord;
   predicted_targets?: JsonRecord[];
   enrichment?: JsonRecord[];
+}
+
+export interface GeneRecord {
+  gene_id: string;
+  tool_count: number;
+  tools: string[];
+}
+
+export interface VennData {
+  sets: Record<string, number>;
+  intersections: Record<string, number>;
+}
+
+export interface JobResultsResponse {
+  job_id: string;
+  total_genes: number;
+  total: number;
+  offset: number;
+  number: number;
+  sort_by: string;
+  order: string;
+  genes: GeneRecord[];
+  venn?: VennData;
+}
+
+export interface JobResultsParams {
+  geneLabel?: string;
+  sortBy?: "gene_label" | "tool_count";
+  ascendOrDescend?: "asc" | "desc";
+  offset?: number;
+  number?: number;
 }
 
 export interface JobRecord {

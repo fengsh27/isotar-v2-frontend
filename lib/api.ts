@@ -2,6 +2,8 @@ import type {
   CreateJobPayload,
   CreateJobResponse,
   JobRecord,
+  JobResultsParams,
+  JobResultsResponse,
   KillJobResponse,
   MirnaValidationResponse,
 } from "@/lib/types";
@@ -87,6 +89,23 @@ export async function killJob(jobId: string): Promise<KillJobResponse> {
   return fetchJson<KillJobResponse>(
     `/api/v1/jobs/${encodeURIComponent(jobId)}/kill`,
     { method: "POST" },
+  );
+}
+
+export async function getJobResults(
+  jobId: string,
+  params: JobResultsParams = {},
+): Promise<JobResultsResponse> {
+  const query = new URLSearchParams();
+  if (params.geneLabel) query.set("geneLabel", params.geneLabel);
+  if (params.sortBy) query.set("sortBy", params.sortBy);
+  if (params.ascendOrDescend) query.set("ascendOrDescend", params.ascendOrDescend);
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  if (params.number !== undefined) query.set("number", String(params.number));
+
+  const qs = query.toString() ? `?${query.toString()}` : "";
+  return fetchJson<JobResultsResponse>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/result${qs}`,
   );
 }
 
