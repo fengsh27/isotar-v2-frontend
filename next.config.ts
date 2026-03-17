@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const apiBase = process.env.API_BASE?.replace(/\/$/, "") ?? "http://127.0.0.1:5001";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async rewrites() {
     return [
       {

@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env*.local
+node_modules
+.next
+mock_server
+*.md
+Dockerfile
+.dockerignore
