@@ -79,6 +79,8 @@ export interface JobResultsData {
 
 export interface GeneRecord {
   gene_id: string;
+  gene_label: string;
+  gene_name: string;
   tool_count: number;
   tools: string[];
 }

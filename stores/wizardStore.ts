@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
+import { SPECIES_OPTIONS } from "@/lib/constants";
 import type { CreateJobPayload, WizardConfig, WorkflowType } from "@/lib/types";
 
 interface WizardState {
@@ -201,9 +202,12 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       payload.mirna_id = state.mirnaId;
     }
 
-    // genome is only relevant for human; omit for other species (server defaults to "hg38")
-    if (state.species === "9606" && state.humanReference) {
-      payload.genome = state.humanReference;
+    // Resolve genome: human uses the user's hg19/hg38 selection; all others have a fixed code.
+    if (state.species === "9606") {
+      if (state.humanReference) payload.genome = state.humanReference;
+    } else {
+      const speciesOption = SPECIES_OPTIONS.find((o) => o.value === state.species);
+      if (speciesOption?.genome) payload.genome = speciesOption.genome;
     }
 
     if (opState.formattedModifications.length) {

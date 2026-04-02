@@ -228,6 +228,12 @@ export function StepOperation() {
     shiftRight,
   ]);
 
+  const shiftLengthTooShort = useMemo(() => {
+    const hasShiftInput = shiftLeft.trim() !== "" || shiftRight.trim() !== "";
+    if (!hasShiftInput || !shiftedMatureSequence) return false;
+    return shiftedMatureSequence.sequence.length < 17;
+  }, [shiftLeft, shiftRight, shiftedMatureSequence]);
+
   const modificationReferenceSeq = shiftedMatureSequence?.sequence ?? selectedRecord?.mature_seq ?? "";
 
   useEffect(() => {
@@ -332,6 +338,15 @@ export function StepOperation() {
               color="danger"
               title="Right boundary cannot be less than left boundary."
               description={`Current shifted indices: left=${shiftBoundaryValidation.start}, right=${shiftBoundaryValidation.end}`}
+              variant="flat"
+            />
+          ) : null}
+
+          {shiftLengthTooShort ? (
+            <Alert
+              color="danger"
+              title="Shifted sequence is too short."
+              description={`The resulting mature sequence has ${shiftedMatureSequence?.sequence.length ?? 0} nt. Minimum required is 17 nt.`}
               variant="flat"
             />
           ) : null}
@@ -469,7 +484,7 @@ export function StepOperation() {
             <Button
               color="primary"
               onPress={() => setOperationSubstep("modification")}
-              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary}
+              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary || shiftLengthTooShort}
             >
               Next: Modification
             </Button>

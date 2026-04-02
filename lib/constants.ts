@@ -103,21 +103,16 @@ export const TOOL_OPTIONS = [
 ] as const;
 
 export const SPECIES_OPTIONS = [
-  {
-    value: "9606",
-    label: "Homo sapiens",
-    subtitle: "Homo sapiens (Taxonomy ID: 9606)",
-  },
-  {
-    value: "10090",
-    label: "Mus musculus",
-    subtitle: "Mus musculus (Taxonomy ID: 10090)",
-  },
-  {
-    value: "10116",
-    label: "Rattus norvegicus",
-    subtitle: "Rattus norvegicus (Taxonomy ID: 10116)",
-  },
+  { value: "9606",  label: "Homo sapiens",                        subtitle: "Homo sapiens — Human (Taxonomy ID: 9606)",                         genome: null,  file: "hg19 / hg38 (user choice)" },
+  { value: "6239",  label: "Caenorhabditis elegans",              subtitle: "Caenorhabditis elegans — Roundworm (Taxonomy ID: 6239)",            genome: "cel", file: "cel_WBcel235_3UTRs.fasta" },
+  { value: "9615",  label: "Canis lupus familiaris",              subtitle: "Canis lupus familiaris — Dog (Taxonomy ID: 9615)",                  genome: "cfa", file: "cfa_CanFam3.1_3UTRs.fasta" },
+  { value: "7227",  label: "Drosophila melanogaster",             subtitle: "Drosophila melanogaster — Fruitfly (Taxonomy ID: 7227)",            genome: "dme", file: "dme_Release6_3UTRs.fasta" },
+  { value: "7955",  label: "Danio rerio",                         subtitle: "Danio rerio — Zebrafish (Taxonomy ID: 7955)",                       genome: "dre", file: "dre_GRCz11_3UTRs.fasta" },
+  { value: "13616", label: "Monodelphis domestica",               subtitle: "Monodelphis domestica — Gray short-tailed opossum (Taxonomy ID: 13616)", genome: "mdo", file: "mdo_MonDom5_3UTRs.fasta" },
+  { value: "9544",  label: "Macaca mulatta",                      subtitle: "Macaca mulatta — Rhesus macaque (Taxonomy ID: 9544)",               genome: "mml", file: "mml_Mmul_8.0.1_3UTRs.fasta" },
+  { value: "10090", label: "Mus musculus",                        subtitle: "Mus musculus — House mouse (Taxonomy ID: 10090)",                   genome: "mmu", file: "mmu_GRCm38_3UTRs.fasta" },
+  { value: "9598",  label: "Pan troglodytes",                     subtitle: "Pan troglodytes — Chimpanzee (Taxonomy ID: 9598)",                  genome: "ptr", file: "ptr_Pan_tro3.0_3UTRs.fasta" },
+  { value: "10116", label: "Rattus norvegicus",                   subtitle: "Rattus norvegicus — Norway rat (Taxonomy ID: 10116)",               genome: "rno", file: "rno_RGSC6_rn6_3UTRs.fasta" },
 ] as const;
 
 export const OUTPUT_FORMAT_OPTIONS = [
