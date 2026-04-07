@@ -97,7 +97,7 @@ export async function getJobResults(
   params: JobResultsParams = {},
 ): Promise<JobResultsResponse> {
   const query = new URLSearchParams();
-  if (params.geneLabel) query.set("geneLabel", params.geneLabel);
+  if (params.keyword) query.set("keyword", params.keyword);
   if (params.sortBy) query.set("sortBy", params.sortBy);
   if (params.ascendOrDescend) query.set("ascendOrDescend", params.ascendOrDescend);
   if (params.offset !== undefined) query.set("offset", String(params.offset));

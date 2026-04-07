@@ -103,7 +103,7 @@ export interface JobResultsResponse {
 }
 
 export interface JobResultsParams {
-  geneLabel?: string;
+  keyword?: string;
   sortBy?: "gene_label" | "tool_count";
   ascendOrDescend?: "asc" | "desc";
   offset?: number;

@@ -23,7 +23,7 @@ function SortIcon({ active, order }: { active: boolean; order: SortOrder }) {
 
 export function PredictedGenesTable({ jobId, onVennData }: Props) {
   const [filterInput, setFilterInput] = useState("");
-  const [geneLabel, setGeneLabel] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("tool_count");
   const [order, setOrder] = useState<SortOrder>("desc");
   const [offset, setOffset] = useState(0);
@@ -39,7 +39,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
     setFilterInput(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      setGeneLabel(value);
+      setKeyword(value);
       setOffset(0);
     }, 300);
   }
@@ -50,7 +50,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
     setError("");
 
     getJobResults(jobId, {
-      geneLabel: geneLabel || undefined,
+      keyword: keyword || undefined,
       sortBy,
       ascendOrDescend: order,
       offset,
@@ -77,7 +77,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
     return () => {
       active = false;
     };
-  }, [jobId, geneLabel, sortBy, order, offset, onVennData]);
+  }, [jobId, keyword, sortBy, order, offset, onVennData]);
 
   function toggleSort(column: SortBy) {
     if (sortBy === column) {
@@ -98,7 +98,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="Filter by gene label…"
+          placeholder="Filter by gene label, tool, or gene name…"
           value={filterInput}
           onValueChange={handleFilterChange}
           size="sm"
@@ -110,7 +110,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
         />
         {data ? (
           <p className="text-sm text-zinc-500">
-            {geneLabel ? (
+            {keyword ? (
               <>
                 <span className="font-medium text-zinc-700">{total.toLocaleString()}</span> match
                 {total !== 1 ? "es" : ""} of{" "}
