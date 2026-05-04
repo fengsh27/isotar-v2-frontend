@@ -14,7 +14,6 @@ export const WIZARD_STEPS_TARGET = [
   "miRNA",
   "Operation",
   "Prediction Tools",
-  "Select Target",
   "Configuration",
   "Review & Run",
 ] as const;
@@ -33,9 +32,8 @@ export const STEP_CONTEXT: Record<number, string> = {
 
 export const STEP_CONTEXT_TARGET: Record<number, string> = {
   ...STEP_CONTEXT,
-  4: "Optionally filter predictions to specific gene targets. Enter one or more gene IDs or symbols (e.g. TP53, ENSG00000141510), comma-separated. Leave blank to run against all predicted targets.",
-  5: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
-  6: "Review your run request, then start an immutable asynchronous job.",
+  4: "Advanced configuration is optional and collapsed by default. Optionally filter predictions to specific gene targets using the Select Target card.",
+  5: "Review your run request, then start an immutable asynchronous job.",
 };
 
 export const WORKFLOW_LABELS: Record<WorkflowType, string> = {

@@ -1,6 +1,9 @@
 import type {
   CreateJobPayload,
   CreateJobResponse,
+  EnrichmentResult,
+  EnrichmentRunRequest,
+  EnrichmentRunResponse,
   JobRecord,
   JobResultsParams,
   JobResultsResponse,
@@ -12,7 +15,7 @@ import type {
 // transparently proxied to Flask by the Next.js rewrites in next.config.ts.
 // Set NEXT_PUBLIC_API_BASE only if you need to bypass the proxy (e.g. a separate
 // production deployment where the API lives on a different origin).
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
+const API_BASE =  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
 
 class ApiError extends Error {
   status: number;
@@ -135,6 +138,29 @@ export async function getJobResult(jobId: string): Promise<Blob> {
   }
 
   return response.blob();
+}
+
+export async function runEnrichment(
+  jobId: string,
+  payload: EnrichmentRunRequest,
+): Promise<EnrichmentRunResponse> {
+  return fetchJson<EnrichmentRunResponse>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function getEnrichment(jobId: string): Promise<EnrichmentResult> {
+  return fetchJson<EnrichmentResult>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment`,
+  );
+}
+
+export function getEnrichmentDotplotUrl(jobId: string): string {
+  return toUrl(`/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment/dotplot`);
 }
 
 export { ApiError };

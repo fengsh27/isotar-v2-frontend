@@ -110,6 +110,33 @@ export interface JobResultsParams {
   number?: number;
 }
 
+export interface EnrichmentRunRequest {
+  genes: string[];
+  organism?: string;
+  cutoff?: number;
+}
+
+export interface EnrichmentRunResponse {
+  job_id: string;
+  outdir: string;
+}
+
+export interface EnrichmentTerm {
+  term: string;
+  overlap: string;
+  p_value: number | null;
+  adjusted_p_value: number | null;
+  odds_ratio: number | null;
+  combined_score: number | null;
+  genes: string[];
+}
+
+export interface EnrichmentResult {
+  job_id: string;
+  databases: Record<string, EnrichmentTerm[]>;
+  has_dotplot: boolean;
+}
+
 export interface JobRecord {
   job_id: string;
   task_id: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Accordion, AccordionItem, Button, Input } from "@heroui/react";
+import { Accordion, AccordionItem, Button, Input, Textarea } from "@heroui/react";
 
 import { useWizardStore } from "@/stores/wizardStore";
 
@@ -11,6 +11,9 @@ export function StepConfig() {
   const setCores = useWizardStore((state) => state.setCores);
   const setMaxRuntime = useWizardStore((state) => state.setMaxRuntime);
   const setOutputFormat = useWizardStore((state) => state.setOutputFormat);
+  const targetGeneIds = useWizardStore((state) => state.targetGeneIds);
+  const setTargetGeneIds = useWizardStore((state) => state.setTargetGeneIds);
+  const workflow = useWizardStore((state) => state.workflow);
   const next = useWizardStore((state) => state.next);
   const back = useWizardStore((state) => state.back);
 
@@ -77,6 +80,30 @@ export function StepConfig() {
           </div>
         </AccordionItem>
       </Accordion>
+
+      {workflow === "mir-target" && (
+        <Accordion variant="splitted">
+          <AccordionItem
+            key="target"
+            aria-label="Select target genes"
+            title="Select Target (optional)"
+            subtitle="Filter predictions to specific gene targets"
+          >
+            <div className="space-y-3 pb-2">
+              <Textarea
+                label="Gene IDs / Symbols"
+                placeholder="e.g. TP53, ENSG00000141510"
+                value={targetGeneIds}
+                onValueChange={setTargetGeneIds}
+                description="Optional. Enter one or more gene IDs or symbols, comma-separated. Leave blank to run against all predicted targets."
+                variant="bordered"
+                classNames={{ inputWrapper: "bg-white" }}
+                minRows={2}
+              />
+            </div>
+          </AccordionItem>
+        </Accordion>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>

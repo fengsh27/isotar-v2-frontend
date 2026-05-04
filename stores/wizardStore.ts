@@ -50,8 +50,8 @@ interface WizardState {
   toJobPayload: () => CreateJobPayload | null;
 }
 
-function totalSteps(wf: WorkflowType): number {
-  return wf === "mir-target" ? 7 : 6;
+function totalSteps(_wf: WorkflowType): number {
+  return 6;
 }
 
 const initialState: Pick<

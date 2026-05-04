@@ -6,7 +6,6 @@ import { StepMiRNA } from "@/components/wizard/StepMiRNA";
 import { StepOperation } from "@/components/wizard/StepOperation";
 import { StepReview } from "@/components/wizard/StepReview";
 import { StepSpecies } from "@/components/wizard/StepSpecies";
-import { StepTarget } from "@/components/wizard/StepTarget";
 import { StepTools } from "@/components/wizard/StepTools";
 import {
   STEP_CONTEXT,
@@ -18,7 +17,7 @@ import {
 import { useWizardStore } from "@/stores/wizardStore";
 
 const STEPS_LNCRNA = [StepSpecies, StepMiRNA, StepOperation, StepTools, StepConfig, StepReview];
-const STEPS_TARGET = [StepSpecies, StepMiRNA, StepOperation, StepTools, StepTarget, StepConfig, StepReview];
+const STEPS_TARGET = [StepSpecies, StepMiRNA, StepOperation, StepTools, StepConfig, StepReview];
 
 export function Wizard() {
   const step = useWizardStore((state) => state.step);
