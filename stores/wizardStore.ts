@@ -223,8 +223,8 @@ export const useWizardStore = create<WizardState>((set, get) => ({
     }
 
     if (state.workflow === "mir-target" && state.targetGeneIds.trim()) {
-      payload.target_gene_ids = state.targetGeneIds
-        .split(",")
+      payload.targets = state.targetGeneIds
+        .split(/[\n,]/)
         .map((s) => s.trim())
         .filter(Boolean);
     }

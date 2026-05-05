@@ -32,7 +32,7 @@ export const STEP_CONTEXT: Record<number, string> = {
 
 export const STEP_CONTEXT_TARGET: Record<number, string> = {
   ...STEP_CONTEXT,
-  4: "Advanced configuration is optional and collapsed by default. Optionally filter predictions to specific gene targets using the Select Target card.",
+  4: "Advanced configuration is optional and collapsed by default. Optionally filter predictions to specific gene targets using the Select Target card — enter gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546).",
   5: "Review your run request, then start an immutable asynchronous job.",
 };
 

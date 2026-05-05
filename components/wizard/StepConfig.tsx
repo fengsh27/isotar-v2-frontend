@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Accordion, AccordionItem, Button, Input, Textarea } from "@heroui/react";
 
 import { useWizardStore } from "@/stores/wizardStore";
@@ -16,6 +17,25 @@ export function StepConfig() {
   const workflow = useWizardStore((state) => state.workflow);
   const next = useWizardStore((state) => state.next);
   const back = useWizardStore((state) => state.back);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = (ev.target?.result as string) ?? "";
+      setTargetGeneIds(text.trim());
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  const targetCount = targetGeneIds
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter(Boolean).length;
 
   return (
     <section className="space-y-6">
@@ -87,18 +107,49 @@ export function StepConfig() {
             key="target"
             aria-label="Select target genes"
             title="Select Target (optional)"
-            subtitle="Filter predictions to specific gene targets"
+            subtitle="Filter by gene label (e.g. TP53) or RefSeq ID (e.g. NM_000546)"
           >
             <div className="space-y-3 pb-2">
               <Textarea
-                label="Gene IDs / Symbols"
-                placeholder="e.g. TP53, ENSG00000141510"
+                label="Gene Labels / Gene IDs"
+                placeholder={"TP53\nNM_000546\nBRCA1"}
                 value={targetGeneIds}
                 onValueChange={setTargetGeneIds}
-                description="Optional. Enter one or more gene IDs or symbols, comma-separated. Leave blank to run against all predicted targets."
+                description="One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Leave blank to run against all predicted targets."
                 variant="bordered"
                 classNames={{ inputWrapper: "bg-white" }}
-                minRows={2}
+                minRows={4}
+              />
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="flat"
+                  onPress={() => fileInputRef.current?.click()}
+                >
+                  Upload file (.txt)
+                </Button>
+                {targetCount > 0 && (
+                  <span className="text-xs text-zinc-500">
+                    {targetCount} target{targetCount !== 1 ? "s" : ""} entered
+                  </span>
+                )}
+                {targetGeneIds.trim() && (
+                  <Button
+                    size="sm"
+                    variant="light"
+                    color="danger"
+                    onPress={() => setTargetGeneIds("")}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,text/plain"
+                className="hidden"
+                onChange={handleFileUpload}
               />
             </div>
           </AccordionItem>

@@ -26,7 +26,7 @@ export interface CreateJobPayload {
   modifications?: string[];
   shift?: string;
   pre_id?: string;
-  target_gene_ids?: string[];
+  targets?: string[];
 }
 
 export interface MirnaValidationResponse {

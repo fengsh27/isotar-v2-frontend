@@ -1,0 +1,8 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - API_BASE=http://your-flask-host:5001
+    restart: unless-stopped

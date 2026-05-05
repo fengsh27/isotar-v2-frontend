@@ -48,7 +48,7 @@ function buildManifestPreview(args: {
         },
     prediction: {
       tools: args.tools.map((tool) => ({ name: tool })),
-      ...(args.targetGeneIds?.length ? { target_gene_ids: args.targetGeneIds } : {}),
+      ...(args.targetGeneIds?.length ? { targets: args.targetGeneIds } : {}),
     },
     species: {
       taxonomy_id: args.species,
@@ -97,7 +97,7 @@ export function StepReview() {
   const parsedTargetGeneIds =
     workflow === "mir-target"
       ? targetGeneIds
-          .split(",")
+          .split(/[\n,]/)
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
@@ -252,7 +252,7 @@ export function StepReview() {
         </div>
         {workflow === "mir-target" ? (
           <p>
-            <strong>Target gene IDs:</strong>{" "}
+            <strong>Targets:</strong>{" "}
             {parsedTargetGeneIds.length ? parsedTargetGeneIds.join(", ") : "None (all targets)"}
           </p>
         ) : null}
