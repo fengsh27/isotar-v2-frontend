@@ -1,8 +1,25 @@
 services:
-  frontend:
-    build: .
+  backend:
+    image: frankfeng78/isotar-v2:0.2.19
+    container_name: isotar-v2-backend
+    # nginx (8080) inside the container fronts gunicorn workers and routes
+    # /api/v1/* to the v1 app and /mirna/* to the legacy app.
+    # The image ships without /app/logs/gunicorn, which supervisord requires,
+    # so create the missing log dirs before handing off to supervisord.
+    command: sh -c "mkdir -p /app/logs/gunicorn /app/logs/celery && exec /usr/bin/supervisord"
     ports:
-      - "3000:3000"
+      - "8080:8080"
+    volumes:
+      - /data/isotar/out:/opt/out/
+    restart: unless-stopped
+
+  frontend:
+    image: frankfeng78/isotar-v2-frontend:0.1.1
+    container_name: isotar-v2-frontend
+    ports:
+      - "9501:3000"
     environment:
-      - API_BASE=http://your-flask-host:5001
+      - API_BASE=http://backend:8080
+    depends_on:
+      - backend
     restart: unless-stopped
