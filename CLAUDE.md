@@ -2,11 +2,20 @@
 
 **isotar** is a web-based bioinformatics tool for **miRNA-centered target prediction and downstream enrichment analysis**.
 
+### Workflows
+
+Two analysis workflows are supported, selected at wizard start:
+
+| Workflow | Key ID | Steps |
+|---|---|---|
+| miR-Target Prediction | `mir-target` | Species → miRNA → Operation → Tools → Configuration → Review |
+| miR-LncRNA Prediction | `mir-lncrna` | Species → miRNA → Operation → Tools → Configuration → Review |
+
+The `mir-target` workflow adds an optional **Select Target** card inside the Configuration step (gene label / RefSeq ID filtering). Both workflows share the same 6-step sequence.
+
 ### Core workflow
 ```
-
 species → miRNA → operation → prediction tools → configuration → job → results
-
 ```
 
 ### Key characteristics
@@ -131,6 +140,21 @@ software:
 
 LLM agents must **never fabricate** manifest fields.
 
+### Job payload fields (`POST /api/v1/jobs`)
+
+| Field | Type | When included |
+|---|---|---|
+| `mirna_id` | string | validated miRNA ID (not custom seq) |
+| `mirna_seq` | string | custom sequence mode |
+| `tools` | string[] | always |
+| `workflow` | string | always |
+| `genome` | string | when species has a fixed genome code |
+| `cores` | number | always |
+| `modifications` | string[] | when modification operation is set |
+| `shift` | string | when shift operation is set |
+| `pre_id` | string | when precursor ID is set |
+| `targets` | string[] | `mir-target` only, when target genes are specified |
+
 ---
 
 ## 6. Frontend Architecture (Next.js)
@@ -146,15 +170,18 @@ app/
 
 ### Wizard state
 
-* Stored in **Zustand**
-* Not persisted beyond job creation
+* Stored in **Zustand** (`stores/wizardStore.ts`)
+* Not persisted beyond job creation (page refresh resets wizard progress)
+* `workflow` is synced from the URL param `?workflow=` on every mount — do not rely on Zustand alone for workflow identity
 * Canonical fields:
 
+  * `workflow` — `"mir-target"` | `"mir-lncrna"`
   * `mirnaId`
   * `operation`
   * `tools`
   * `species`
   * `config`
+  * `targetGeneIds` — free-text string; newline- or comma-separated gene labels (e.g. `TP53`) or RefSeq IDs (e.g. `NM_000546`); `mir-target` only
 
 ⚠️ LLMs must not introduce parallel state systems.
 
