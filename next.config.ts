@@ -8,8 +8,15 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/v1/:path*",
-        destination: `${apiBase}/api/v1/:path*`,
+        // Match anything under /api/v1/ EXCEPT exactly
+        // /api/v1/jobs/<id>/enrichment — that path is handled locally by
+        // app/api/v1/jobs/[jobId]/enrichment/route.ts so we can control the
+        // upstream timeout. Subpaths (e.g. .../enrichment/dotplot) still
+        // rewrite through to the backend as normal.
+        // In Next.js, afterFiles rewrites run BEFORE dynamic routes, so a
+        // plain /api/v1/:path* would always preempt the Route Handler.
+        source: "/api/v1/:path((?!jobs/[^/]+/enrichment$).+)",
+        destination: `${apiBase}/api/v1/:path`,
       },
       {
         source: "/mirna/:path*",

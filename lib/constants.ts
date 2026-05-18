@@ -21,7 +21,7 @@ export const WIZARD_STEPS_TARGET = [
 // Alias for backwards compatibility
 export const WIZARD_STEPS = WIZARD_STEPS_LNCRNA;
 
-// Matches the backend's MAX_CORE_PER_JOB env in docker-compose.yml.
+// Matches the backend's ISOTAR_MAX_CORES_PER_JOB env in docker-compose.yml.
 // Keep these two in sync when tuning.
 export const MAX_CORES_PER_JOB = 8;
 
