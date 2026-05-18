@@ -12,9 +12,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# API_BASE is consumed server-side at runtime by next.config.ts (rewrites).
-# NEXT_PUBLIC_* variables are baked in at build time; leave empty so the
-# Next.js proxy handles all /api/v1/* and /mirna/* calls.
+# Next.js evaluates rewrites() in next.config.ts at build time and serializes
+# the result into routes-manifest.json. In standalone output the runtime
+# server reads from that manifest, so API_BASE must be set during `next build`
+# — setting it only at runtime has no effect on the rewrite destinations.
+ARG API_BASE=http://backend:8080
+ENV API_BASE=${API_BASE}
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN yarn build
@@ -41,6 +44,6 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 # API_BASE points to the Flask backend; override at runtime via -e or compose.
-ENV API_BASE=http://127.0.0.1:5001
+# ENV API_BASE=http://127.0.0.1:5001
 
 CMD ["node", "server.js"]

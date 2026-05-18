@@ -21,6 +21,10 @@ export const WIZARD_STEPS_TARGET = [
 // Alias for backwards compatibility
 export const WIZARD_STEPS = WIZARD_STEPS_LNCRNA;
 
+// Matches the backend's MAX_CORE_PER_JOB env in docker-compose.yml.
+// Keep these two in sync when tuning.
+export const MAX_CORES_PER_JOB = 8;
+
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
   1: "Choose one miRNA identifier from the available list for the selected species.",

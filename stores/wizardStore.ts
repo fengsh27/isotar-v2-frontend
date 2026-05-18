@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
-import { SPECIES_OPTIONS } from "@/lib/constants";
+import { MAX_CORES_PER_JOB, SPECIES_OPTIONS } from "@/lib/constants";
 import type { CreateJobPayload, WizardConfig, WorkflowType } from "@/lib/types";
 
 interface WizardState {
@@ -193,7 +193,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
     const payload: CreateJobPayload = {
       tools: state.tools,
       workflow: state.workflow,
-      cores: state.config.cores,
+      cores: Math.max(1, Math.min(state.config.cores, MAX_CORES_PER_JOB)),
     };
 
     if (state.useCustomMirnaSeq) {

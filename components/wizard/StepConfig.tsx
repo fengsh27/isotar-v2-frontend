@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { Accordion, AccordionItem, Button, Input, Textarea } from "@heroui/react";
 
+import { MAX_CORES_PER_JOB } from "@/lib/constants";
 import { useWizardStore } from "@/stores/wizardStore";
 
 export function StepConfig() {
@@ -63,12 +64,13 @@ export function StepConfig() {
             <Input
               type="number"
               min={1}
-              max={128}
+              max={MAX_CORES_PER_JOB}
               label="Number of CPU cores"
+              description={`1–${MAX_CORES_PER_JOB} per job`}
               value={String(cores)}
               onValueChange={(value) => {
                 const parsed = Number(value);
-                if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 128) {
+                if (Number.isFinite(parsed) && parsed >= 1 && parsed <= MAX_CORES_PER_JOB) {
                   setCores(Math.trunc(parsed));
                 }
               }}
