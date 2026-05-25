@@ -50,7 +50,9 @@ export default function RootLayout({
 
             <main className="mx-auto w-full max-w-6xl px-5 pb-8 pt-3">{children}</main>
 
-            <footer className="mx-auto mt-8 w-full max-w-6xl px-5 pb-6" />
+            <footer className="mx-auto mt-8 w-full max-w-6xl px-5 pb-6 text-center text-xs text-zinc-400">
+              isoTar v{process.env.NEXT_PUBLIC_APP_VERSION}
+            </footer>
           </div>
         </Providers>
       </body>
