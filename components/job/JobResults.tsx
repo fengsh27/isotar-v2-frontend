@@ -10,9 +10,10 @@ import type { VennData } from "@/lib/types";
 
 interface Props {
   jobId: string;
+  mirnaId?: string;
 }
 
-export function JobResults({ jobId }: Props) {
+export function JobResults({ jobId, mirnaId }: Props) {
   const [venn, setVenn] = useState<VennData | null>(null);
 
   const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
@@ -21,7 +22,15 @@ export function JobResults({ jobId }: Props) {
   return (
     <section className="surface-panel rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-zinc-900">Results</h2>
+        <div>
+          <h2 className="text-xl font-semibold text-zinc-900">Results</h2>
+          {mirnaId ? (
+            <p className="text-sm text-zinc-600">
+              Predicted targets of{" "}
+              <span className="font-medium text-zinc-800">{mirnaId}</span>
+            </p>
+          ) : null}
+        </div>
         <Button
           as="a"
           href={downloadUrl}

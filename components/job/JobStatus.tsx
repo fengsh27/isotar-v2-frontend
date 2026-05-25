@@ -188,6 +188,27 @@ export function JobStatus({ jobId }: { jobId: string }) {
         {job ? (
           <div className="mt-4 grid gap-2 text-sm text-zinc-600 md:grid-cols-3">
             <p>
+              <strong>miRNA:</strong> {job.mirna_id ?? "—"}
+              {job.pre_id ? ` (${job.pre_id})` : ""}
+            </p>
+            <p>
+              <strong>Genome:</strong> {job.genome ?? "—"}
+            </p>
+            <p>
+              <strong>Tools:</strong>{" "}
+              {job.tools && job.tools.length ? job.tools.join(", ") : "—"}
+            </p>
+            {job.modifications && job.modifications.length ? (
+              <p>
+                <strong>Edits:</strong> {job.modifications.join(", ")}
+              </p>
+            ) : null}
+            {job.shift ? (
+              <p>
+                <strong>Shift:</strong> {job.shift}
+              </p>
+            ) : null}
+            <p>
               <strong>Created:</strong> {formatDateTime(job.created_at)}
             </p>
             <p>
@@ -246,7 +267,7 @@ export function JobStatus({ jobId }: { jobId: string }) {
       ) : null}
 
       {job?.status === "succeeded" ? (
-        <JobResults jobId={jobId} />
+        <JobResults jobId={jobId} mirnaId={job.mirna_id} />
       ) : (
         <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
           {isFinished
