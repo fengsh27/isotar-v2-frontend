@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef } from "react";
-import { Accordion, AccordionItem, Button, Input, Textarea } from "@heroui/react";
+import { Accordion, AccordionItem, Alert, Button, Input, Textarea } from "@heroui/react";
 
 import { MAX_CORES_PER_JOB } from "@/lib/constants";
+import { findMalformedTargets, parseTargets } from "@/lib/targets";
 import { useWizardStore } from "@/stores/wizardStore";
 
 export function StepConfig() {
@@ -33,10 +34,8 @@ export function StepConfig() {
     e.target.value = "";
   }
 
-  const targetCount = targetGeneIds
-    .split(/[\n,]/)
-    .map((s) => s.trim())
-    .filter(Boolean).length;
+  const targetCount = parseTargets(targetGeneIds).length;
+  const malformedTargets = findMalformedTargets(targetGeneIds);
 
   return (
     <section className="space-y-6">
@@ -153,6 +152,21 @@ export function StepConfig() {
                 className="hidden"
                 onChange={handleFileUpload}
               />
+              {malformedTargets.length > 0 && (
+                <Alert
+                  color="warning"
+                  variant="flat"
+                  title={`${malformedTargets.length} ${
+                    malformedTargets.length === 1 ? "entry doesn't" : "entries don't"
+                  } look like a gene symbol or NM_ ID`}
+                >
+                  <span className="text-xs">
+                    {malformedTargets.slice(0, 5).map((t) => `"${t}"`).join(", ")}
+                    {malformedTargets.length > 5 ? ", …" : ""}. Double-check these — the
+                    job will still run, but unrecognized targets are ignored during filtering.
+                  </span>
+                </Alert>
+              )}
             </div>
           </AccordionItem>
         </Accordion>

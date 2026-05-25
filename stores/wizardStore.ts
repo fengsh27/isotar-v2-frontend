@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
 import { MAX_CORES_PER_JOB, SPECIES_OPTIONS } from "@/lib/constants";
+import { parseTargets } from "@/lib/targets";
 import type { CreateJobPayload, WizardConfig, WorkflowType } from "@/lib/types";
 
 interface WizardState {
@@ -222,11 +223,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       payload.pre_id = state.preId;
     }
 
-    if (state.workflow === "mir-target" && state.targetGeneIds.trim()) {
-      payload.targets = state.targetGeneIds
-        .split(/[\n,]/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+    if (state.workflow === "mir-target") {
+      const targets = parseTargets(state.targetGeneIds);
+      if (targets.length) payload.targets = targets;
     }
 
     return payload;

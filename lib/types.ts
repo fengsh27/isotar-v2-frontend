@@ -85,9 +85,32 @@ export interface GeneRecord {
   tools: string[];
 }
 
+/** One exclusive region of an UpSet plot: targets predicted by *exactly* these tools. */
+export interface VennCombination {
+  /** Tools present in this region — a subset of the keys in `VennData.sets`. */
+  tools: string[];
+  /** Number of targets predicted by exactly these tools and no others. */
+  size: number;
+}
+
 export interface VennData {
+  /** Total targets predicted per tool, keyed by tool name. */
   sets: Record<string, number>;
+  /**
+   * Inclusive ("shared by at least") counts, keyed by `&`-joined tool names
+   * (e.g. `"Targetscan&miRanda"`). Used for the 2- and 3-set circle Venn.
+   */
   intersections: Record<string, number>;
+  /**
+   * Exclusive intersection sizes for UpSet-style display when there are 4+ tools.
+   * Optional — older backends may omit it, in which case the table fallback is used.
+   */
+  combinations?: VennCombination[];
+  /**
+   * Consensus distribution: number of targets predicted by exactly k tools,
+   * keyed `"1"`..`"N"`. Optional — derived from `combinations` when absent.
+   */
+  degrees?: Record<string, number>;
 }
 
 export interface JobResultsResponse {

@@ -2,7 +2,8 @@
 
 import { Chip, Progress } from "@heroui/react";
 
-import type { JobRecord, ToolProgressStatus } from "@/lib/types";
+import type { ToolProgressStatus } from "@/lib/types";
+import { formatDuration, type ProgressSummary, type ToolRow } from "@/lib/toolProgress";
 
 function formatUnix(ts: number | null): string {
   if (ts === null) return "-";
@@ -18,22 +19,26 @@ const TOOL_STATUS_COLOR: Record<
   done: "success",
 };
 
-export function JobProgress({ job }: { job: JobRecord }) {
-  const { progress } = job;
-  if (!progress) return null;
+interface Props {
+  rows: ToolRow[];
+  summary: ProgressSummary;
+}
 
-  const { total_tools, completed_tools, current_tool, tools_status } = progress;
-  const percent = total_tools > 0 ? Math.round((completed_tools / total_tools) * 100) : 0;
+export function JobProgress({ rows, summary }: Props) {
+  if (!rows.length) return null;
+
+  const { total, completed, current } = summary;
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
     <div className="space-y-4 rounded-xl border border-zinc-200 bg-white/80 p-4">
       <div className="space-y-1">
         <div className="flex items-center justify-between text-sm">
           <p className="font-medium text-zinc-900">
-            Predicting: <span className="text-zinc-600">{current_tool}</span>
+            Predicting: <span className="text-zinc-600">{current}</span>
           </p>
           <span className="text-xs text-zinc-500">
-            {completed_tools}/{total_tools} tools
+            {completed}/{total} tools
           </span>
         </div>
         <Progress
@@ -50,25 +55,29 @@ export function JobProgress({ job }: { job: JobRecord }) {
             <th className="pb-1 pr-4 font-semibold uppercase tracking-wide">Tool</th>
             <th className="pb-1 pr-4 font-semibold uppercase tracking-wide">Status</th>
             <th className="pb-1 pr-4 font-semibold uppercase tracking-wide">Started</th>
-            <th className="pb-1 font-semibold uppercase tracking-wide">Finished</th>
+            <th className="pb-1 pr-4 font-semibold uppercase tracking-wide">Finished</th>
+            <th className="pb-1 font-semibold uppercase tracking-wide">Time costed</th>
           </tr>
         </thead>
         <tbody>
-          {Object.entries(tools_status).map(([tool, info]) => (
-            <tr key={tool} className="border-b border-zinc-100 last:border-0">
-              <td className="py-1.5 pr-4 font-medium text-zinc-700">{tool}</td>
+          {rows.map((row) => (
+            <tr key={row.name} className="border-b border-zinc-100 last:border-0">
+              <td className="py-1.5 pr-4 font-medium text-zinc-700">{row.name}</td>
               <td className="py-1.5 pr-4">
                 <Chip
                   size="sm"
                   variant="flat"
-                  color={TOOL_STATUS_COLOR[info.status]}
+                  color={TOOL_STATUS_COLOR[row.status]}
                   className="capitalize"
                 >
-                  {info.status}
+                  {row.status}
                 </Chip>
               </td>
-              <td className="py-1.5 pr-4 text-zinc-600">{formatUnix(info.started_at)}</td>
-              <td className="py-1.5 text-zinc-600">{formatUnix(info.finished_at)}</td>
+              <td className="py-1.5 pr-4 text-zinc-600">{formatUnix(row.started_at)}</td>
+              <td className="py-1.5 pr-4 text-zinc-600">{formatUnix(row.finished_at)}</td>
+              <td className="py-1.5 tabular-nums text-zinc-700">
+                {formatDuration(row.started_at, row.finished_at)}
+              </td>
             </tr>
           ))}
         </tbody>

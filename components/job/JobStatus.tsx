@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Chip, Spinner } from "@heroui/react";
 import { useRouter } from "next/navigation";
 
@@ -8,6 +8,12 @@ import { getJob, killJob } from "@/lib/api";
 import { untrackJobId } from "@/lib/jobStorage";
 import { JOB_STAGE_SEQUENCE, STATUS_COLOR } from "@/lib/constants";
 import type { JobRecord } from "@/lib/types";
+import {
+  buildToolRows,
+  mergeToolsStatus,
+  summarize,
+  type ToolStatusAcc,
+} from "@/lib/toolProgress";
 import { JobProgress } from "@/components/job/JobProgress";
 import { JobResults } from "@/components/job/JobResults";
 
@@ -60,6 +66,10 @@ export function JobStatus({ jobId }: { jobId: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isKilling, setIsKilling] = useState(false);
 
+  // Backend `tools_status` can arrive as a per-poll snapshot of just the active
+  // tool. Accumulate it across polls so completed tools keep their timing.
+  const toolAccRef = useRef<ToolStatusAcc>({});
+
   const isFinished = useMemo(() => (job ? isTerminal(job.status) : false), [job]);
   const canKill = job?.status === "queued" || job?.status === "running";
   const statusTitle = job
@@ -71,6 +81,7 @@ export function JobStatus({ jobId }: { jobId: string }) {
   useEffect(() => {
     let active = true;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    toolAccRef.current = {}; // reset accumulated tool timing for this job
 
     const load = async () => {
       try {
@@ -79,6 +90,10 @@ export function JobStatus({ jobId }: { jobId: string }) {
           return;
         }
 
+        toolAccRef.current = mergeToolsStatus(
+          toolAccRef.current,
+          next.progress?.tools_status,
+        );
         setJob(next);
         setError("");
         setIsLoading(false);
@@ -198,7 +213,13 @@ export function JobStatus({ jobId }: { jobId: string }) {
         />
       ) : null}
 
-      {job ? <JobProgress job={job} /> : null}
+      {job
+        ? (() => {
+            const rows = buildToolRows(toolAccRef.current, job.tools);
+            const summary = summarize(rows, job.progress?.current_tool);
+            return rows.length ? <JobProgress rows={rows} summary={summary} /> : null;
+          })()
+        : null}
 
       {job ? (
         <section className="surface-panel rounded-2xl p-5">

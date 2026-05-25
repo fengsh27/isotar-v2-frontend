@@ -8,6 +8,7 @@ import { createJob } from "@/lib/api";
 import { evaluateOperationState } from "@/lib/operation";
 import { SPECIES_OPTIONS, TOOL_OPTIONS, WORKFLOW_LABELS } from "@/lib/constants";
 import { trackJobId } from "@/lib/jobStorage";
+import { parseTargets } from "@/lib/targets";
 import { useWizardStore } from "@/stores/wizardStore";
 
 function buildManifestPreview(args: {
@@ -94,13 +95,7 @@ export function StepReview() {
       ? humanReference || undefined
       : (SPECIES_OPTIONS.find((o) => o.value === species)?.genome ?? undefined);
 
-  const parsedTargetGeneIds =
-    workflow === "mir-target"
-      ? targetGeneIds
-          .split(/[\n,]/)
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
+  const parsedTargetGeneIds = workflow === "mir-target" ? parseTargets(targetGeneIds) : [];
 
   const manifestPreview = buildManifestPreview({
     mirnaId,
