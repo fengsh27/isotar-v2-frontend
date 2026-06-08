@@ -9,19 +9,7 @@ import {
   type NucleotideBase,
 } from "@/lib/operation";
 import { useWizardStore } from "@/stores/wizardStore";
-
-type MirnaRecord = {
-  pre_id: string;
-  pre_seq: string;
-  mature_seq: string;
-  mature_loc_start: number;
-  mature_loc_end: number;
-  ext_pre_seq?: string;
-  ext_mature_loc_start?: number;
-  ext_mature_loc_end?: number;
-};
-
-type MirnaDataset = Record<string, MirnaRecord[]>;
+import { loadMirnaDataset, type MirnaRecord } from "@/lib/mirnaData";
 
 function buildCaretLine(length: number, start: number, end: number): string {
   const safeStart = Math.min(Math.max(1, start), length);
@@ -95,18 +83,18 @@ export function StepOperation() {
     let active = true;
 
     const loadRecord = async () => {
-      if (!mirnaId || species !== "9606") {
+      if (!mirnaId) {
         setSelectedRecord(null);
         return;
       }
 
       try {
-        const loaded = (await import("@/data/mature_pre_mirna_ext.json")).default as MirnaDataset;
+        const loaded = await loadMirnaDataset(species);
         if (!active) {
           return;
         }
 
-        setSelectedRecord(loaded[mirnaId]?.[0] ?? null);
+        setSelectedRecord(loaded?.[mirnaId]?.[0] ?? null);
       } catch {
         if (!active) {
           return;
