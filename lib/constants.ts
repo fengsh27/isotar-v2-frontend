@@ -104,6 +104,36 @@ export const TOOL_OPTIONS = [
   },
 ] as const;
 
+/**
+ * Species (by taxonomy-id value) for which TargetScan has prebuilt reference
+ * data: Homo sapiens (hg19/hg38), mouse, rat, chimpanzee, rhesus macaque, dog,
+ * and gray short-tailed opossum. For any other species TargetScan is disabled
+ * in the tool-selection step.
+ */
+export const TARGETSCAN_SPECIES = new Set<string>([
+  "9606", // Homo sapiens (hg19 / hg38)
+  "10090", // Mus musculus (mmu)
+  "10116", // Rattus norvegicus (rno)
+  "9598", // Pan troglodytes (ptr)
+  "9544", // Macaca mulatta (mml)
+  "9615", // Canis lupus familiaris (cfa)
+  "13616", // Monodelphis domestica (mdo)
+]);
+
+/** Tool value of TargetScan in TOOL_OPTIONS (species-restricted). */
+export const TARGETSCAN_TOOL = "Targetscan";
+
+/** Whether a prediction tool is available for the given species. */
+export function isToolSupportedForSpecies(
+  toolValue: string,
+  species: string,
+): boolean {
+  if (toolValue === TARGETSCAN_TOOL) {
+    return TARGETSCAN_SPECIES.has(species);
+  }
+  return true;
+}
+
 export const SPECIES_OPTIONS = [
   { value: "9606",  label: "Homo sapiens",                        subtitle: "Homo sapiens — Human (Taxonomy ID: 9606)",                         genome: null,  file: "hg19 / hg38 (user choice)" },
   { value: "6239",  label: "Caenorhabditis elegans",              subtitle: "Caenorhabditis elegans — Roundworm (Taxonomy ID: 6239)",            genome: "cel", file: "cel_WBcel235_3UTRs.fasta" },
