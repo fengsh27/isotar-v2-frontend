@@ -192,6 +192,10 @@ export function StepMiRNA() {
       selectedRecord.mature_seq,
     )
     : null;
+  // Some species records omit one or both precursor sequences. Show whichever
+  // are present; fall back to the mature sequence when neither exists.
+  const hasPreSeq = Boolean(selectedRecord?.pre_seq?.trim());
+  const hasExtPreSeq = Boolean(selectedRecord?.ext_pre_seq?.trim());
 
   const normalizedCustomSeq = normalizeSeq(customMirnaSeq);
   const customSeqValid = normalizedCustomSeq.length > 0 && RNA_SEQ_RE.test(customMirnaSeq);
@@ -427,37 +431,51 @@ export function StepMiRNA() {
             <p className="text-sm text-zinc-800">
               <strong>Mature accession:</strong> {selectedRecord.mature_acc}
             </p>
-            <p className="text-sm text-zinc-800">
-              <strong>Location on precursor:</strong> {selectedRecord.mature_loc_start}–
-              {selectedRecord.mature_loc_end}
-            </p>
+            {hasPreSeq ? (
+              <>
+                <p className="text-sm text-zinc-800">
+                  <strong>Location on precursor:</strong> {selectedRecord.mature_loc_start}–
+                  {selectedRecord.mature_loc_end}
+                </p>
 
-            <div>
-              <p className="text-sm font-semibold text-zinc-800">Precursor sequence</p>
-              <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
-                {precursorHighlight?.prefix}
-                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
-                  {precursorHighlight?.mature}
-                </span>
-                {precursorHighlight?.suffix}
-              </pre>
-            </div>
+                <div>
+                  <p className="text-sm font-semibold text-zinc-800">Precursor sequence</p>
+                  <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
+                    {precursorHighlight?.prefix}
+                    <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
+                      {precursorHighlight?.mature}
+                    </span>
+                    {precursorHighlight?.suffix}
+                  </pre>
+                </div>
+              </>
+            ) : null}
 
-            <p className="text-sm text-zinc-800">
-              <strong>Extended mature location:</strong> {selectedRecord.ext_mature_loc_start}–
-              {selectedRecord.ext_mature_loc_end}
-            </p>
+            {hasExtPreSeq ? (
+              <>
+                <p className="text-sm text-zinc-800">
+                  <strong>Extended mature location:</strong> {selectedRecord.ext_mature_loc_start}–
+                  {selectedRecord.ext_mature_loc_end}
+                </p>
 
-            <div>
-              <p className="text-sm font-semibold text-zinc-800">Extended precursor sequence</p>
-              <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
-                {extPrecursorHighlight?.prefix}
-                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
-                  {extPrecursorHighlight?.mature}
-                </span>
-                {extPrecursorHighlight?.suffix}
-              </pre>
-            </div>
+                <div>
+                  <p className="text-sm font-semibold text-zinc-800">Extended precursor sequence</p>
+                  <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
+                    {extPrecursorHighlight?.prefix}
+                    <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
+                      {extPrecursorHighlight?.mature}
+                    </span>
+                    {extPrecursorHighlight?.suffix}
+                  </pre>
+                </div>
+              </>
+            ) : null}
+
+            {!hasPreSeq && !hasExtPreSeq ? (
+              <p className="text-xs text-zinc-500">
+                No precursor sequence available for this miRNA — the mature sequence is used instead.
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-3">

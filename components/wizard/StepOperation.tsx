@@ -9,7 +9,7 @@ import {
   type NucleotideBase,
 } from "@/lib/operation";
 import { useWizardStore } from "@/stores/wizardStore";
-import { loadMirnaDataset, type MirnaRecord } from "@/lib/mirnaData";
+import { loadMirnaDataset, resolvePrecursor, type MirnaRecord } from "@/lib/mirnaData";
 
 function buildCaretLine(length: number, start: number, end: number): string {
   const safeStart = Math.min(Math.max(1, start), length);
@@ -113,10 +113,12 @@ export function StepOperation() {
 
   const operationState = evaluateOperationState(modifications, shiftLeft, shiftRight);
   const atShiftSubstep = operationSubstep === "shift";
-  const shiftReferenceSequence =
-    selectedRecord?.ext_pre_seq?.trim() || selectedRecord?.pre_seq || "";
-  const shiftBaseStart = selectedRecord?.ext_mature_loc_start ?? selectedRecord?.mature_loc_start;
-  const shiftBaseEnd = selectedRecord?.ext_mature_loc_end ?? selectedRecord?.mature_loc_end;
+  // Reference sequence + mature coordinates, falling back ext_pre_seq → pre_seq
+  // → mature_seq for records that omit the precursor sequences.
+  const resolvedPrecursor = selectedRecord ? resolvePrecursor(selectedRecord) : null;
+  const shiftReferenceSequence = resolvedPrecursor?.seq ?? "";
+  const shiftBaseStart = resolvedPrecursor?.matureStart;
+  const shiftBaseEnd = resolvedPrecursor?.matureEnd;
   const shiftBoundaryValidation = useMemo(() => {
     if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return { hasInvalidBoundary: false, start: null as number | null, end: null as number | null };

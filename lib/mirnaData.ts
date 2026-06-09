@@ -44,6 +44,49 @@ export function hasMirnaDataset(species: string): boolean {
   return species in LOADERS;
 }
 
+export interface ResolvedPrecursor {
+  /** The sequence to display / operate on. */
+  seq: string;
+  /** 1-based start of the mature region within `seq`. */
+  matureStart: number;
+  /** 1-based end of the mature region within `seq`. */
+  matureEnd: number;
+  /** Which field `seq` was taken from. */
+  source: "ext_pre_seq" | "pre_seq" | "mature_seq";
+}
+
+/**
+ * Resolve the precursor sequence to use for a record, with its paired mature
+ * coordinates. Some species records omit `ext_pre_seq` and/or `pre_seq`, so the
+ * fallback chain is: `ext_pre_seq` → `pre_seq` → `mature_seq`. The mature
+ * location is paired to the chosen sequence (the extended coordinates only apply
+ * to `ext_pre_seq`); for the `mature_seq` fallback the whole sequence is mature.
+ */
+export function resolvePrecursor(record: MirnaRecord): ResolvedPrecursor {
+  if (record.ext_pre_seq?.trim()) {
+    return {
+      seq: record.ext_pre_seq,
+      matureStart: record.ext_mature_loc_start,
+      matureEnd: record.ext_mature_loc_end,
+      source: "ext_pre_seq",
+    };
+  }
+  if (record.pre_seq?.trim()) {
+    return {
+      seq: record.pre_seq,
+      matureStart: record.mature_loc_start,
+      matureEnd: record.mature_loc_end,
+      source: "pre_seq",
+    };
+  }
+  return {
+    seq: record.mature_seq,
+    matureStart: 1,
+    matureEnd: record.mature_seq.length,
+    source: "mature_seq",
+  };
+}
+
 /** Display name for a species value, used in error/empty-state messaging. */
 export function speciesLabel(species: string): string {
   return SPECIES_OPTIONS.find((s) => s.value === species)?.label ?? species;
