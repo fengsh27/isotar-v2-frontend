@@ -145,6 +145,26 @@ export const SPECIES_OPTIONS = [
   { value: "10116", label: "Rattus norvegicus",                   subtitle: "Rattus norvegicus — Norway rat (Taxonomy ID: 10116)",               genome: "rno", file: "rno_RGSC6_rn6_3UTRs.fasta" },
 ] as const;
 
+/**
+ * Enrichment (Enrichr) is only offered for species with a supported organism
+ * gene-set library: human, mouse, and rat. The job's `genome` code maps to the
+ * Enrichr organism name; any other species returns `null` and the enrichment
+ * feature is hidden.
+ */
+export function enrichmentOrganismForGenome(genome?: string | null): string | null {
+  switch (genome) {
+    case "hg19":
+    case "hg38":
+      return "Human";
+    case "mmu":
+      return "Mouse";
+    case "rno":
+      return "Rat";
+    default:
+      return null;
+  }
+}
+
 export const OUTPUT_FORMAT_OPTIONS = [
   { value: "standard", label: "Standard" },
   { value: "extended", label: "Extended" },

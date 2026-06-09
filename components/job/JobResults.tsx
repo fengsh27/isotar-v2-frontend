@@ -6,15 +6,20 @@ import { Button, Tab, Tabs } from "@heroui/react";
 import { EnrichmentPanel } from "@/components/job/EnrichmentPanel";
 import { PredictedGenesTable } from "@/components/job/PredictedGenesTable";
 import { VennDiagram } from "@/components/job/VennDiagram";
+import { enrichmentOrganismForGenome } from "@/lib/constants";
 import type { VennData } from "@/lib/types";
 
 interface Props {
   jobId: string;
   mirnaId?: string;
+  genome?: string;
 }
 
-export function JobResults({ jobId, mirnaId }: Props) {
+export function JobResults({ jobId, mirnaId, genome }: Props) {
   const [venn, setVenn] = useState<VennData | null>(null);
+
+  // Enrichment is only available for species with a supported Enrichr organism.
+  const enrichmentOrganism = enrichmentOrganismForGenome(genome);
 
   const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
   const downloadUrl = `${apiBase}/api/v1/jobs/${jobId}/result/download`;
@@ -50,9 +55,11 @@ export function JobResults({ jobId, mirnaId }: Props) {
           </div>
         </Tab>
 
-        <Tab key="enrichment" title="Enrichment">
-          <EnrichmentPanel jobId={jobId} />
-        </Tab>
+        {enrichmentOrganism ? (
+          <Tab key="enrichment" title="Enrichment">
+            <EnrichmentPanel jobId={jobId} organism={enrichmentOrganism} />
+          </Tab>
+        ) : null}
       </Tabs>
     </section>
   );
