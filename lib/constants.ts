@@ -14,13 +14,16 @@ export const WIZARD_STEPS_TARGET = [
   "miRNA",
   "Operation",
   "Prediction Tools",
-  "Select Target",
   "Configuration",
   "Review & Run",
 ] as const;
 
 // Alias for backwards compatibility
 export const WIZARD_STEPS = WIZARD_STEPS_LNCRNA;
+
+// Matches the backend's ISOTAR_MAX_CORES_PER_JOB env in docker-compose.yml.
+// Keep these two in sync when tuning.
+export const MAX_CORES_PER_JOB = 8;
 
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
@@ -33,9 +36,8 @@ export const STEP_CONTEXT: Record<number, string> = {
 
 export const STEP_CONTEXT_TARGET: Record<number, string> = {
   ...STEP_CONTEXT,
-  4: "Optionally filter predictions to specific gene targets. Enter one or more gene IDs or symbols (e.g. TP53, ENSG00000141510), comma-separated. Leave blank to run against all predicted targets.",
-  5: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
-  6: "Review your run request, then start an immutable asynchronous job.",
+  4: "Advanced configuration is optional and collapsed by default. Optionally filter predictions to specific gene targets using the Select Target card — enter gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546).",
+  5: "Review your run request, then start an immutable asynchronous job.",
 };
 
 export const WORKFLOW_LABELS: Record<WorkflowType, string> = {
@@ -102,22 +104,45 @@ export const TOOL_OPTIONS = [
   },
 ] as const;
 
+/**
+ * Species (by taxonomy-id value) for which TargetScan has prebuilt reference
+ * data: Homo sapiens (hg19/hg38), mouse, zebrafish, fruitfly, roundworm, and
+ * dog. For any other species TargetScan is disabled in the tool-selection step.
+ */
+export const TARGETSCAN_SPECIES = new Set<string>([
+  "9606", // Homo sapiens (hg19 / hg38)
+  "10090", // Mus musculus (mmu)
+  "7955", // Danio rerio (dre)
+  "7227", // Drosophila melanogaster (dme)
+  "6239", // Caenorhabditis elegans (cel)
+  "9615", // Canis lupus familiaris (cfa)
+]);
+
+/** Tool value of TargetScan in TOOL_OPTIONS (species-restricted). */
+export const TARGETSCAN_TOOL = "Targetscan";
+
+/** Whether a prediction tool is available for the given species. */
+export function isToolSupportedForSpecies(
+  toolValue: string,
+  species: string,
+): boolean {
+  if (toolValue === TARGETSCAN_TOOL) {
+    return TARGETSCAN_SPECIES.has(species);
+  }
+  return true;
+}
+
 export const SPECIES_OPTIONS = [
-  {
-    value: "9606",
-    label: "Homo sapiens",
-    subtitle: "Homo sapiens (Taxonomy ID: 9606)",
-  },
-  {
-    value: "10090",
-    label: "Mus musculus",
-    subtitle: "Mus musculus (Taxonomy ID: 10090)",
-  },
-  {
-    value: "10116",
-    label: "Rattus norvegicus",
-    subtitle: "Rattus norvegicus (Taxonomy ID: 10116)",
-  },
+  { value: "9606",  label: "Homo sapiens",                        subtitle: "Homo sapiens — Human (Taxonomy ID: 9606)",                         genome: null,  file: "hg19 / hg38 (user choice)" },
+  { value: "6239",  label: "Caenorhabditis elegans",              subtitle: "Caenorhabditis elegans — Roundworm (Taxonomy ID: 6239)",            genome: "cel", file: "cel_WBcel235_3UTRs.fasta" },
+  { value: "9615",  label: "Canis lupus familiaris",              subtitle: "Canis lupus familiaris — Dog (Taxonomy ID: 9615)",                  genome: "cfa", file: "cfa_CanFam3.1_3UTRs.fasta" },
+  { value: "7227",  label: "Drosophila melanogaster",             subtitle: "Drosophila melanogaster — Fruitfly (Taxonomy ID: 7227)",            genome: "dme", file: "dme_Release6_3UTRs.fasta" },
+  { value: "7955",  label: "Danio rerio",                         subtitle: "Danio rerio — Zebrafish (Taxonomy ID: 7955)",                       genome: "dre", file: "dre_GRCz11_3UTRs.fasta" },
+  { value: "13616", label: "Monodelphis domestica",               subtitle: "Monodelphis domestica — Gray short-tailed opossum (Taxonomy ID: 13616)", genome: "mdo", file: "mdo_MonDom5_3UTRs.fasta" },
+  { value: "9544",  label: "Macaca mulatta",                      subtitle: "Macaca mulatta — Rhesus macaque (Taxonomy ID: 9544)",               genome: "mml", file: "mml_Mmul_8.0.1_3UTRs.fasta" },
+  { value: "10090", label: "Mus musculus",                        subtitle: "Mus musculus — House mouse (Taxonomy ID: 10090)",                   genome: "mmu", file: "mmu_GRCm38_3UTRs.fasta" },
+  { value: "9598",  label: "Pan troglodytes",                     subtitle: "Pan troglodytes — Chimpanzee (Taxonomy ID: 9598)",                  genome: "ptr", file: "ptr_Pan_tro3.0_3UTRs.fasta" },
+  { value: "10116", label: "Rattus norvegicus",                   subtitle: "Rattus norvegicus — Norway rat (Taxonomy ID: 10116)",               genome: "rno", file: "rno_RGSC6_rn6_3UTRs.fasta" },
 ] as const;
 
 export const OUTPUT_FORMAT_OPTIONS = [

@@ -23,7 +23,7 @@ function SortIcon({ active, order }: { active: boolean; order: SortOrder }) {
 
 export function PredictedGenesTable({ jobId, onVennData }: Props) {
   const [filterInput, setFilterInput] = useState("");
-  const [geneLabel, setGeneLabel] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("tool_count");
   const [order, setOrder] = useState<SortOrder>("desc");
   const [offset, setOffset] = useState(0);
@@ -39,7 +39,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
     setFilterInput(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      setGeneLabel(value);
+      setKeyword(value);
       setOffset(0);
     }, 300);
   }
@@ -50,7 +50,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
     setError("");
 
     getJobResults(jobId, {
-      geneLabel: geneLabel || undefined,
+      keyword: keyword || undefined,
       sortBy,
       ascendOrDescend: order,
       offset,
@@ -77,7 +77,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
     return () => {
       active = false;
     };
-  }, [jobId, geneLabel, sortBy, order, offset, onVennData]);
+  }, [jobId, keyword, sortBy, order, offset, onVennData]);
 
   function toggleSort(column: SortBy) {
     if (sortBy === column) {
@@ -98,7 +98,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="Filter by gene label…"
+          placeholder="Filter by gene label, tool, or gene name…"
           value={filterInput}
           onValueChange={handleFilterChange}
           size="sm"
@@ -110,7 +110,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
         />
         {data ? (
           <p className="text-sm text-zinc-500">
-            {geneLabel ? (
+            {keyword ? (
               <>
                 <span className="font-medium text-zinc-700">{total.toLocaleString()}</span> match
                 {total !== 1 ? "es" : ""} of{" "}
@@ -151,14 +151,14 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                  <th className="w-14 px-4 py-3 text-right">No.</th>
+                  <th className="w-14 px-4 py-3 text-right">NO.</th>
                   <th className="px-4 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => toggleSort("gene_label")}
                       className="flex items-center gap-1 hover:text-zinc-900"
                     >
-                      Gene Label
+                      GENE LABEL
                       <SortIcon active={sortBy === "gene_label"} order={order} />
                     </button>
                   </th>
@@ -168,16 +168,18 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
                       onClick={() => toggleSort("tool_count")}
                       className="flex items-center gap-1 hover:text-zinc-900"
                     >
-                      Tools
+                      TOOLS
                       <SortIcon active={sortBy === "tool_count"} order={order} />
                     </button>
                   </th>
+                  <th className="px-4 py-3 text-left">GENE NAME</th>
+                  <th className="px-4 py-3 text-left">GENE ID</th>
                 </tr>
               </thead>
               <tbody>
                 {!data?.genes.length ? (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-zinc-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
                       No genes match the current filter.
                     </td>
                   </tr>
@@ -187,7 +189,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
                       <td className="px-4 py-2.5 text-right text-xs text-zinc-400">
                         {offset + idx + 1}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-zinc-800">{gene.gene_id}</td>
+                      <td className="px-4 py-2.5 font-mono text-zinc-800">{gene.gene_label}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="mr-1 text-xs text-zinc-400">({gene.tool_count})</span>
@@ -201,6 +203,8 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
                           ))}
                         </div>
                       </td>
+                      <td className="px-4 py-2.5 text-zinc-700">{gene.gene_name}</td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">{gene.gene_id}</td>
                     </tr>
                   ))
                 )}

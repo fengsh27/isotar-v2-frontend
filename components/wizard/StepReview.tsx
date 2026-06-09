@@ -8,6 +8,7 @@ import { createJob } from "@/lib/api";
 import { evaluateOperationState } from "@/lib/operation";
 import { SPECIES_OPTIONS, TOOL_OPTIONS, WORKFLOW_LABELS } from "@/lib/constants";
 import { trackJobId } from "@/lib/jobStorage";
+import { parseTargets } from "@/lib/targets";
 import { useWizardStore } from "@/stores/wizardStore";
 
 function buildManifestPreview(args: {
@@ -20,6 +21,7 @@ function buildManifestPreview(args: {
   shift: string | null;
   tools: string[];
   species: string;
+  genome?: string;
   config: { cores: number; maxRuntime: string; outputFormat: "standard" | "extended" };
   workflow: string;
   targetGeneIds?: string[];
@@ -47,10 +49,11 @@ function buildManifestPreview(args: {
         },
     prediction: {
       tools: args.tools.map((tool) => ({ name: tool })),
-      ...(args.targetGeneIds?.length ? { target_gene_ids: args.targetGeneIds } : {}),
+      ...(args.targetGeneIds?.length ? { targets: args.targetGeneIds } : {}),
     },
     species: {
       taxonomy_id: args.species,
+      ...(args.genome ? { genome: args.genome } : {}),
     },
     configuration: args.config,
     note:
@@ -87,13 +90,12 @@ export function StepReview() {
   const speciesLabel =
     SPECIES_OPTIONS.find((option) => option.value === species)?.subtitle ?? species;
 
-  const parsedTargetGeneIds =
-    workflow === "mir-target"
-      ? targetGeneIds
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
+  const resolvedGenome =
+    species === "9606"
+      ? humanReference || undefined
+      : (SPECIES_OPTIONS.find((o) => o.value === species)?.genome ?? undefined);
+
+  const parsedTargetGeneIds = workflow === "mir-target" ? parseTargets(targetGeneIds) : [];
 
   const manifestPreview = buildManifestPreview({
     mirnaId,
@@ -105,6 +107,7 @@ export function StepReview() {
     shift: opState.shift,
     tools,
     species,
+    genome: resolvedGenome,
     config,
     workflow,
     targetGeneIds: parsedTargetGeneIds.length ? parsedTargetGeneIds : undefined,
@@ -215,11 +218,12 @@ export function StepReview() {
         <p>
           <strong>Species:</strong> {speciesLabel}
         </p>
-        {species === "9606" ? (
-          <p>
-            <strong>Reference file:</strong> {humanReference || "Not set"}
-          </p>
-        ) : null}
+        <p>
+          <strong>Reference file:</strong>{" "}
+          {species === "9606"
+            ? (humanReference || "Not set")
+            : (SPECIES_OPTIONS.find((o) => o.value === species)?.genome ?? "—")}
+        </p>
         <p>
           <strong>Configuration:</strong> {config.cores} cores
         </p>
@@ -243,7 +247,7 @@ export function StepReview() {
         </div>
         {workflow === "mir-target" ? (
           <p>
-            <strong>Target gene IDs:</strong>{" "}
+            <strong>Targets:</strong>{" "}
             {parsedTargetGeneIds.length ? parsedTargetGeneIds.join(", ") : "None (all targets)"}
           </p>
         ) : null}

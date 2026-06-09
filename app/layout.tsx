@@ -24,24 +24,24 @@ export default function RootLayout({
           <div className="min-h-screen">
             <header className="sticky top-0 z-20 border-b border-zinc-300/80 bg-[#f4f8f2] px-4 py-3 shadow-sm">
               <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-1">
-                <Link href="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight text-zinc-900">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-teal-600" />
+                <Link href="/" className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-zinc-900">
+                  <span className="inline-block h-3 w-3 rounded-full bg-teal-600" />
                   isoTar
                 </Link>
-                <nav className="flex items-center gap-1 rounded-xl border border-zinc-300 bg-[#e6eee2] p-1 text-sm text-zinc-700">
-                  <Link href="/run?workflow=mir-target&new=1" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                <nav className="flex items-center gap-1 rounded-xl border border-zinc-300 bg-[#e6eee2] p-1 text-base font-medium text-zinc-700">
+                  <Link href="/run?workflow=mir-target&new=1" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     miR-Target Prediction
                   </Link>
-                  <Link href="/run?workflow=mir-lncrna&new=1" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                  <Link href="/run?workflow=mir-lncrna&new=1" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     miR-LncRNA Prediction
                   </Link>
-                  <Link href="/jobs" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                  <Link href="/jobs" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     Jobs
                   </Link>
-                  <Link href="/docs" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                  <Link href="/docs" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     Docs
                   </Link>
-                  <Link href="/about" className="rounded-lg px-3 py-1.5 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                  <Link href="/about" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     About
                   </Link>
                 </nav>
@@ -50,7 +50,9 @@ export default function RootLayout({
 
             <main className="mx-auto w-full max-w-6xl px-5 pb-8 pt-3">{children}</main>
 
-            <footer className="mx-auto mt-8 w-full max-w-6xl px-5 pb-6" />
+            <footer className="mx-auto mt-8 w-full max-w-6xl px-5 pb-6 text-center text-xs text-zinc-400">
+              isoTar v{process.env.NEXT_PUBLIC_APP_VERSION}
+            </footer>
           </div>
         </Providers>
       </body>

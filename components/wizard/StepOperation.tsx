@@ -9,19 +9,7 @@ import {
   type NucleotideBase,
 } from "@/lib/operation";
 import { useWizardStore } from "@/stores/wizardStore";
-
-type MirnaRecord = {
-  pre_id: string;
-  pre_seq: string;
-  mature_seq: string;
-  mature_loc_start: number;
-  mature_loc_end: number;
-  ext_pre_seq?: string;
-  ext_mature_loc_start?: number;
-  ext_mature_loc_end?: number;
-};
-
-type MirnaDataset = Record<string, MirnaRecord[]>;
+import { loadMirnaDataset, resolvePrecursor, type MirnaRecord } from "@/lib/mirnaData";
 
 function buildCaretLine(length: number, start: number, end: number): string {
   const safeStart = Math.min(Math.max(1, start), length);
@@ -95,18 +83,18 @@ export function StepOperation() {
     let active = true;
 
     const loadRecord = async () => {
-      if (!mirnaId || species !== "9606") {
+      if (!mirnaId) {
         setSelectedRecord(null);
         return;
       }
 
       try {
-        const loaded = (await import("@/data/mature_pre_mirna_ext.json")).default as MirnaDataset;
+        const loaded = await loadMirnaDataset(species);
         if (!active) {
           return;
         }
 
-        setSelectedRecord(loaded[mirnaId]?.[0] ?? null);
+        setSelectedRecord(loaded?.[mirnaId]?.[0] ?? null);
       } catch {
         if (!active) {
           return;
@@ -125,10 +113,12 @@ export function StepOperation() {
 
   const operationState = evaluateOperationState(modifications, shiftLeft, shiftRight);
   const atShiftSubstep = operationSubstep === "shift";
-  const shiftReferenceSequence =
-    selectedRecord?.ext_pre_seq?.trim() || selectedRecord?.pre_seq || "";
-  const shiftBaseStart = selectedRecord?.ext_mature_loc_start ?? selectedRecord?.mature_loc_start;
-  const shiftBaseEnd = selectedRecord?.ext_mature_loc_end ?? selectedRecord?.mature_loc_end;
+  // Reference sequence + mature coordinates, falling back ext_pre_seq → pre_seq
+  // → mature_seq for records that omit the precursor sequences.
+  const resolvedPrecursor = selectedRecord ? resolvePrecursor(selectedRecord) : null;
+  const shiftReferenceSequence = resolvedPrecursor?.seq ?? "";
+  const shiftBaseStart = resolvedPrecursor?.matureStart;
+  const shiftBaseEnd = resolvedPrecursor?.matureEnd;
   const shiftBoundaryValidation = useMemo(() => {
     if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return { hasInvalidBoundary: false, start: null as number | null, end: null as number | null };
@@ -227,6 +217,12 @@ export function StepOperation() {
     shiftReferenceSequence,
     shiftRight,
   ]);
+
+  const shiftLengthTooShort = useMemo(() => {
+    const hasShiftInput = shiftLeft.trim() !== "" || shiftRight.trim() !== "";
+    if (!hasShiftInput || !shiftedMatureSequence) return false;
+    return shiftedMatureSequence.sequence.length < 17;
+  }, [shiftLeft, shiftRight, shiftedMatureSequence]);
 
   const modificationReferenceSeq = shiftedMatureSequence?.sequence ?? selectedRecord?.mature_seq ?? "";
 
@@ -332,6 +328,15 @@ export function StepOperation() {
               color="danger"
               title="Right boundary cannot be less than left boundary."
               description={`Current shifted indices: left=${shiftBoundaryValidation.start}, right=${shiftBoundaryValidation.end}`}
+              variant="flat"
+            />
+          ) : null}
+
+          {shiftLengthTooShort ? (
+            <Alert
+              color="danger"
+              title="Shifted sequence is too short."
+              description={`The resulting mature sequence has ${shiftedMatureSequence?.sequence.length ?? 0} nt. Minimum required is 17 nt.`}
               variant="flat"
             />
           ) : null}
@@ -469,7 +474,7 @@ export function StepOperation() {
             <Button
               color="primary"
               onPress={() => setOperationSubstep("modification")}
-              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary}
+              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary || shiftLengthTooShort}
             >
               Next: Modification
             </Button>

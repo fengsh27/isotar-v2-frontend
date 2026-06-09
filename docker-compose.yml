@@ -1,0 +1,49 @@
+services:
+  backend:
+    image: frankfeng78/isotar-v2:0.2.22
+    container_name: isotar-v2-backend
+    # nginx (8080) inside the container fronts gunicorn workers and routes
+    # /api/v1/* to the v1 app and /mirna/* to the legacy app.
+    # The image ships without /app/logs/gunicorn, which supervisord requires,
+    # so create the missing log dirs before handing off to supervisord.
+    command: sh -c "mkdir -p /app/logs/gunicorn /app/logs/celery && exec /usr/bin/supervisord"
+    # No `ports:` — backend is reachable only on the compose network at
+    # http://backend:8080. `expose:` is documentation; it does not publish.
+    expose:
+      - "8080"
+    # Concurrency knobs are consumed by app_v1/limits.py inside the image:
+    #   ISOTAR_MAX_CORES_PER_JOB    -- API rejects cores > this (HTTP 400).
+    #   ISOTAR_DEFAULT_CORES        -- used when submission omits "cores".
+    #   ISOTAR_MAX_CONCURRENT_JOBS  -- celery --concurrency for app_v1_worker.
+    # Combined ceiling: 4 jobs * 8 cores = 32 cores, matching the cpus limit below.
+    environment:
+      - ISOTAR_MAX_CORES_PER_JOB=8
+      - ISOTAR_DEFAULT_CORES=8
+      - ISOTAR_MAX_CONCURRENT_JOBS=4
+    volumes:
+      - /data/isotar/out:/opt/out/
+    # Hard ceiling on CPU usage for all jobs combined. Safety net regardless
+    # of how many concurrent jobs the celery worker picks up. Adjust to your
+    # host (this assumes ~48 cores available; leaves headroom for everything else).
+    deploy:
+      resources:
+        limits:
+          cpus: "32"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      args:
+        # Baked into routes-manifest.json at build time; must match the
+        # docker-network address of the backend service.
+        API_BASE: http://backend:8080
+    image: frankfeng78/isotar-v2-frontend:0.1.7
+    container_name: isotar-v2-frontend
+    ports:
+      - "9501:3000"
+    environment:
+      - API_BASE=http://backend:8080
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,12 +1,15 @@
 "use client";
 
+import { ConsensusHistogram } from "@/components/job/ConsensusHistogram";
+import { UpSetPlot } from "@/components/job/UpSetPlot";
 import type { VennData } from "@/lib/types";
+import { VENN_COLORS } from "@/lib/venn";
 
 interface Props {
   venn: VennData;
 }
 
-const COLORS = ["#14b8a6", "#6366f1", "#f59e0b"];
+const COLORS = VENN_COLORS;
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -111,6 +114,61 @@ function Venn3({ sets, ints }: { sets: string[]; ints: Record<string, number> })
   );
 }
 
+// ── color legend (circle Venn only) ─────────────────────────────────────────
+
+function Legend({ sets }: { sets: Record<string, number> }) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      {Object.keys(sets).map((name, i) => (
+        <span key={name} className="flex items-center gap-1.5 text-xs text-zinc-700">
+          <span
+            className="inline-block h-3 w-3 rounded-full"
+            style={{ backgroundColor: COLORS[i] ?? "#94a3b8" }}
+          />
+          {name}
+          <span className="text-zinc-400">({sets[name].toLocaleString()})</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── fallback table (4+ tools, no combination data) ──────────────────────────
+
+function FallbackTable({ venn }: { venn: VennData }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        Tool overlap
+      </p>
+      <div className="overflow-x-auto rounded-xl border border-zinc-200">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600">
+              <th className="px-4 py-2 text-left">Set / Intersection</th>
+              <th className="px-4 py-2 text-right">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(venn.sets).map(([k, v]) => (
+              <tr key={k} className="border-b border-zinc-100">
+                <td className="px-4 py-2 font-medium text-zinc-800">{k}</td>
+                <td className="px-4 py-2 text-right text-zinc-700">{v.toLocaleString()}</td>
+              </tr>
+            ))}
+            {Object.entries(venn.intersections).map(([k, v]) => (
+              <tr key={k} className="border-b border-zinc-100">
+                <td className="px-4 py-2 text-zinc-600">{k.replaceAll("&", " ∩ ")}</td>
+                <td className="px-4 py-2 text-right text-zinc-700">{v.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── public component ──────────────────────────────────────────────────────
 
 export function VennDiagram({ venn }: Props) {
@@ -119,57 +177,33 @@ export function VennDiagram({ venn }: Props) {
   const setNames = Object.keys(venn.sets);
   const n = setNames.length;
 
-  return (
-    <div className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-        Tool overlap (Venn diagram)
-      </p>
-
-      {n === 2 ? (
-        <Venn2 sets={setNames} ints={combined} />
-      ) : n === 3 ? (
-        <Venn3 sets={setNames} ints={combined} />
-      ) : (
-        // Fallback: simple table for >3 sets
-        <div className="overflow-x-auto rounded-xl border border-zinc-200">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600">
-                <th className="px-4 py-2 text-left">Set / Intersection</th>
-                <th className="px-4 py-2 text-right">Count</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(venn.sets).map(([k, v]) => (
-                <tr key={k} className="border-b border-zinc-100">
-                  <td className="px-4 py-2 font-medium text-zinc-800">{k}</td>
-                  <td className="px-4 py-2 text-right text-zinc-700">{v.toLocaleString()}</td>
-                </tr>
-              ))}
-              {Object.entries(venn.intersections).map(([k, v]) => (
-                <tr key={k} className="border-b border-zinc-100">
-                  <td className="px-4 py-2 text-zinc-600">{k.replaceAll("&", " ∩ ")}</td>
-                  <td className="px-4 py-2 text-right text-zinc-700">{v.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* legend */}
-      <div className="flex flex-wrap gap-3">
-        {setNames.map((name, i) => (
-          <span key={name} className="flex items-center gap-1.5 text-xs text-zinc-700">
-            <span
-              className="inline-block h-3 w-3 rounded-full"
-              style={{ backgroundColor: COLORS[i] ?? "#94a3b8" }}
-            />
-            {name}
-            <span className="text-zinc-400">({venn.sets[name].toLocaleString()})</span>
-          </span>
-        ))}
+  // 2–3 tools: a real circle Venn reads best.
+  if (n === 2 || n === 3) {
+    return (
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          Tool overlap (Venn diagram)
+        </p>
+        {n === 2 ? (
+          <Venn2 sets={setNames} ints={combined} />
+        ) : (
+          <Venn3 sets={setNames} ints={combined} />
+        )}
+        <Legend sets={venn.sets} />
       </div>
+    );
+  }
+
+  // 4+ tools: a literal Venn is unreadable. Show consensus summary, then an
+  // UpSet plot for the per-combination detail (table fallback if unavailable).
+  return (
+    <div className="space-y-6">
+      <ConsensusHistogram venn={venn} />
+      {venn.combinations?.length ? (
+        <UpSetPlot venn={venn} />
+      ) : (
+        <FallbackTable venn={venn} />
+      )}
     </div>
   );
 }

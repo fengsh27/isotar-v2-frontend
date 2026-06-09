@@ -14,16 +14,17 @@ export function RunPageClient() {
   const setWorkflow = useWizardStore((state) => state.setWorkflow);
 
   useEffect(() => {
-    if (searchParams.get("new") !== "1") {
-      return;
-    }
-
     const wfParam = searchParams.get("workflow");
     const wf: WorkflowType = wfParam === "mir-target" ? "mir-target" : "mir-lncrna";
 
-    reset();
-    setWorkflow(wf);
-    router.replace(`/run?workflow=${wf}`);
+    if (searchParams.get("new") === "1") {
+      reset();
+      setWorkflow(wf);
+      router.replace(`/run?workflow=${wf}`);
+    } else {
+      // Restore workflow from URL on page refresh (Zustand state is not persisted).
+      setWorkflow(wf);
+    }
   }, [reset, setWorkflow, router, searchParams]);
 
   return <Wizard />;

@@ -4,21 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Spinner } from "@heroui/react";
 
 import { useWizardStore } from "@/stores/wizardStore";
-
-type MirnaRecord = {
-  pre_id: string;
-  pre_seq: string;
-  mature_seq: string;
-  mature_loc_start: number;
-  mature_loc_end: number;
-  ext_pre_seq: string;
-  ext_mature_loc_start: number;
-  ext_mature_loc_end: number;
-  mature_acc: string;
-  pre_acc: string;
-};
-
-type MirnaDataset = Record<string, MirnaRecord[]>;
+import {
+  hasMirnaDataset,
+  loadMirnaDataset,
+  speciesLabel,
+  type MirnaDataset,
+  type MirnaRecord,
+} from "@/lib/mirnaData";
 
 function getHighlightedSegments(
   sequence: string,
@@ -59,10 +51,15 @@ function speciesFromMirnaId(mirnaId: string): string {
   const prefix = mirnaId.split("-")[0]?.toLowerCase() ?? "";
   const mapping: Record<string, string> = {
     hsa: "Homo sapiens",
-    mmu: "Mus musculus",
-    rno: "Rattus norvegicus",
-    dme: "Drosophila melanogaster",
     cel: "Caenorhabditis elegans",
+    cfa: "Canis lupus familiaris",
+    dme: "Drosophila melanogaster",
+    dre: "Danio rerio",
+    mdo: "Monodelphis domestica",
+    mml: "Macaca mulatta",
+    mmu: "Mus musculus",
+    ptr: "Pan troglodytes",
+    rno: "Rattus norvegicus",
   };
 
   return mapping[prefix] ?? prefix.toUpperCase();
@@ -108,20 +105,18 @@ export function StepMiRNA() {
 
     const loadData = async () => {
       try {
-        if (species !== "9606") {
-          if (!active) {
-            return;
-          }
+        setLoadError("");
+        const loaded = await loadMirnaDataset(species);
+        if (!active) {
+          return;
+        }
 
+        if (!loaded) {
+          // No reference catalog bundled for this species.
           setDataset({});
           setSelectedId("");
           setQuery("");
           setMirnaId("");
-          return;
-        }
-
-        const loaded = (await import("@/data/mature_pre_mirna_ext.json")).default as MirnaDataset;
-        if (!active) {
           return;
         }
 
@@ -130,6 +125,11 @@ export function StepMiRNA() {
         if (mirnaId && loaded[mirnaId]) {
           setSelectedId(mirnaId);
           setQuery(mirnaId);
+        } else if (mirnaId) {
+          // Selected miRNA belongs to a different species — reset selection.
+          setSelectedId("");
+          setQuery("");
+          setMirnaId("");
         }
       } catch {
         if (!active) {
@@ -137,7 +137,7 @@ export function StepMiRNA() {
         }
 
         setLoadError(
-          "Unable to load miRNA reference data. Check data/mature_pre_mirna_ext.json and retry.",
+          `Unable to load the miRNA reference catalog for ${speciesLabel(species)}. Please retry.`,
         );
       }
     };
@@ -158,7 +158,7 @@ export function StepMiRNA() {
   }, [dataset]);
 
   const filteredIds = useMemo(() => {
-    if (species !== "9606") {
+    if (!hasMirnaDataset(species)) {
       return [];
     }
 
@@ -169,19 +169,6 @@ export function StepMiRNA() {
     const term = query.trim().toLowerCase();
     return ids.filter((id) => id.toLowerCase().includes(term));
   }, [ids, query, species]);
-
-  useEffect(() => {
-    if (!dataset || species !== "9606") {
-      return;
-    }
-
-    const exact = dataset[query.trim()];
-    if (exact) {
-      setSelectedId(query.trim());
-      setSelectedRecordIndex(0);
-      setMirnaId(query.trim());
-    }
-  }, [dataset, query, setMirnaId, species]);
 
   const records = selectedId && dataset ? dataset[selectedId] ?? [] : [];
   const selectedRecord = records[selectedRecordIndex] ?? null;
@@ -205,6 +192,10 @@ export function StepMiRNA() {
       selectedRecord.mature_seq,
     )
     : null;
+  // Some species records omit one or both precursor sequences. Show whichever
+  // are present; fall back to the mature sequence when neither exists.
+  const hasPreSeq = Boolean(selectedRecord?.pre_seq?.trim());
+  const hasExtPreSeq = Boolean(selectedRecord?.ext_pre_seq?.trim());
 
   const normalizedCustomSeq = normalizeSeq(customMirnaSeq);
   const customSeqValid = normalizedCustomSeq.length > 0 && RNA_SEQ_RE.test(customMirnaSeq);
@@ -354,7 +345,12 @@ export function StepMiRNA() {
                   return;
                 }
 
-                if (!dataset?.[trimmed]) {
+                if (dataset?.[trimmed]) {
+                  // Typed an exact catalog ID — select it immediately.
+                  setSelectedId(trimmed);
+                  setSelectedRecordIndex(0);
+                  setMirnaId(trimmed);
+                } else {
                   setSelectedId("");
                   setMirnaId("");
                 }
@@ -367,7 +363,7 @@ export function StepMiRNA() {
             <p className="mb-2 px-1 text-xs text-zinc-500">
               Showing {filteredIds.length} matches
             </p>
-            {species !== "9606" ? (
+            {!hasMirnaDataset(species) ? (
               <p className="px-1 py-2 text-sm text-zinc-600">
                 No miRNA ID list available for the selected species.
               </p>
@@ -435,37 +431,51 @@ export function StepMiRNA() {
             <p className="text-sm text-zinc-800">
               <strong>Mature accession:</strong> {selectedRecord.mature_acc}
             </p>
-            <p className="text-sm text-zinc-800">
-              <strong>Location on precursor:</strong> {selectedRecord.mature_loc_start}–
-              {selectedRecord.mature_loc_end}
-            </p>
+            {hasPreSeq ? (
+              <>
+                <p className="text-sm text-zinc-800">
+                  <strong>Location on precursor:</strong> {selectedRecord.mature_loc_start}–
+                  {selectedRecord.mature_loc_end}
+                </p>
 
-            <div>
-              <p className="text-sm font-semibold text-zinc-800">Precursor sequence</p>
-              <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
-                {precursorHighlight?.prefix}
-                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
-                  {precursorHighlight?.mature}
-                </span>
-                {precursorHighlight?.suffix}
-              </pre>
-            </div>
+                <div>
+                  <p className="text-sm font-semibold text-zinc-800">Precursor sequence</p>
+                  <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
+                    {precursorHighlight?.prefix}
+                    <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
+                      {precursorHighlight?.mature}
+                    </span>
+                    {precursorHighlight?.suffix}
+                  </pre>
+                </div>
+              </>
+            ) : null}
 
-            <p className="text-sm text-zinc-800">
-              <strong>Extended mature location:</strong> {selectedRecord.ext_mature_loc_start}–
-              {selectedRecord.ext_mature_loc_end}
-            </p>
+            {hasExtPreSeq ? (
+              <>
+                <p className="text-sm text-zinc-800">
+                  <strong>Extended mature location:</strong> {selectedRecord.ext_mature_loc_start}–
+                  {selectedRecord.ext_mature_loc_end}
+                </p>
 
-            <div>
-              <p className="text-sm font-semibold text-zinc-800">Extended precursor sequence</p>
-              <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
-                {extPrecursorHighlight?.prefix}
-                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
-                  {extPrecursorHighlight?.mature}
-                </span>
-                {extPrecursorHighlight?.suffix}
-              </pre>
-            </div>
+                <div>
+                  <p className="text-sm font-semibold text-zinc-800">Extended precursor sequence</p>
+                  <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-50 p-2 text-xs text-zinc-800">
+                    {extPrecursorHighlight?.prefix}
+                    <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
+                      {extPrecursorHighlight?.mature}
+                    </span>
+                    {extPrecursorHighlight?.suffix}
+                  </pre>
+                </div>
+              </>
+            ) : null}
+
+            {!hasPreSeq && !hasExtPreSeq ? (
+              <p className="text-xs text-zinc-500">
+                No precursor sequence available for this miRNA — the mature sequence is used instead.
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-3">

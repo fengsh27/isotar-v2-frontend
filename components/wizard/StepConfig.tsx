@@ -1,7 +1,10 @@
 "use client";
 
-import { Accordion, AccordionItem, Button, Input } from "@heroui/react";
+import { useRef } from "react";
+import { Accordion, AccordionItem, Alert, Button, Input, Textarea } from "@heroui/react";
 
+import { MAX_CORES_PER_JOB } from "@/lib/constants";
+import { findMalformedTargets, parseTargets } from "@/lib/targets";
 import { useWizardStore } from "@/stores/wizardStore";
 
 export function StepConfig() {
@@ -11,8 +14,28 @@ export function StepConfig() {
   const setCores = useWizardStore((state) => state.setCores);
   const setMaxRuntime = useWizardStore((state) => state.setMaxRuntime);
   const setOutputFormat = useWizardStore((state) => state.setOutputFormat);
+  const targetGeneIds = useWizardStore((state) => state.targetGeneIds);
+  const setTargetGeneIds = useWizardStore((state) => state.setTargetGeneIds);
+  const workflow = useWizardStore((state) => state.workflow);
   const next = useWizardStore((state) => state.next);
   const back = useWizardStore((state) => state.back);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = (ev.target?.result as string) ?? "";
+      setTargetGeneIds(text.trim());
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  const targetCount = parseTargets(targetGeneIds).length;
+  const malformedTargets = findMalformedTargets(targetGeneIds);
 
   return (
     <section className="space-y-6">
@@ -40,12 +63,13 @@ export function StepConfig() {
             <Input
               type="number"
               min={1}
-              max={128}
+              max={MAX_CORES_PER_JOB}
               label="Number of CPU cores"
+              description={`1–${MAX_CORES_PER_JOB} per job`}
               value={String(cores)}
               onValueChange={(value) => {
                 const parsed = Number(value);
-                if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 128) {
+                if (Number.isFinite(parsed) && parsed >= 1 && parsed <= MAX_CORES_PER_JOB) {
                   setCores(Math.trunc(parsed));
                 }
               }}
@@ -77,6 +101,76 @@ export function StepConfig() {
           </div>
         </AccordionItem>
       </Accordion>
+
+      {workflow === "mir-target" && (
+        <Accordion variant="splitted">
+          <AccordionItem
+            key="target"
+            aria-label="Select target genes"
+            title="Select Target (optional)"
+            subtitle="Filter by gene label (e.g. TP53) or RefSeq ID (e.g. NM_000546)"
+          >
+            <div className="space-y-3 pb-2">
+              <Textarea
+                label="Gene Labels / Gene IDs"
+                placeholder={"TP53\nNM_000546\nBRCA1"}
+                value={targetGeneIds}
+                onValueChange={setTargetGeneIds}
+                description="One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Leave blank to run against all predicted targets."
+                variant="bordered"
+                classNames={{ inputWrapper: "bg-white" }}
+                minRows={4}
+              />
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="flat"
+                  onPress={() => fileInputRef.current?.click()}
+                >
+                  Upload file (.txt)
+                </Button>
+                {targetCount > 0 && (
+                  <span className="text-xs text-zinc-500">
+                    {targetCount} target{targetCount !== 1 ? "s" : ""} entered
+                  </span>
+                )}
+                {targetGeneIds.trim() && (
+                  <Button
+                    size="sm"
+                    variant="light"
+                    color="danger"
+                    onPress={() => setTargetGeneIds("")}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,text/plain"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              {malformedTargets.length > 0 && (
+                <Alert
+                  color="warning"
+                  variant="flat"
+                  title={`${malformedTargets.length} ${
+                    malformedTargets.length === 1 ? "entry doesn't" : "entries don't"
+                  } look like a gene symbol or NM_ ID`}
+                >
+                  <span className="text-xs">
+                    {malformedTargets.slice(0, 5).map((t) => `"${t}"`).join(", ")}
+                    {malformedTargets.length > 5 ? ", …" : ""}. Double-check these — the
+                    job will still run, but unrecognized targets are ignored during filtering.
+                  </span>
+                </Alert>
+              )}
+            </div>
+          </AccordionItem>
+        </Accordion>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>

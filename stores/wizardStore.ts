@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
+import { MAX_CORES_PER_JOB, SPECIES_OPTIONS } from "@/lib/constants";
+import { parseTargets } from "@/lib/targets";
 import type { CreateJobPayload, WizardConfig, WorkflowType } from "@/lib/types";
 
 interface WizardState {
@@ -49,8 +51,8 @@ interface WizardState {
   toJobPayload: () => CreateJobPayload | null;
 }
 
-function totalSteps(wf: WorkflowType): number {
-  return wf === "mir-target" ? 7 : 6;
+function totalSteps(_wf: WorkflowType): number {
+  return 6;
 }
 
 const initialState: Pick<
@@ -192,7 +194,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
     const payload: CreateJobPayload = {
       tools: state.tools,
       workflow: state.workflow,
-      cores: state.config.cores,
+      cores: Math.max(1, Math.min(state.config.cores, MAX_CORES_PER_JOB)),
     };
 
     if (state.useCustomMirnaSeq) {
@@ -201,9 +203,12 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       payload.mirna_id = state.mirnaId;
     }
 
-    // genome is only relevant for human; omit for other species (server defaults to "hg38")
-    if (state.species === "9606" && state.humanReference) {
-      payload.genome = state.humanReference;
+    // Resolve genome: human uses the user's hg19/hg38 selection; all others have a fixed code.
+    if (state.species === "9606") {
+      if (state.humanReference) payload.genome = state.humanReference;
+    } else {
+      const speciesOption = SPECIES_OPTIONS.find((o) => o.value === state.species);
+      if (speciesOption?.genome) payload.genome = speciesOption.genome;
     }
 
     if (opState.formattedModifications.length) {
@@ -218,11 +223,9 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       payload.pre_id = state.preId;
     }
 
-    if (state.workflow === "mir-target" && state.targetGeneIds.trim()) {
-      payload.target_gene_ids = state.targetGeneIds
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+    if (state.workflow === "mir-target") {
+      const targets = parseTargets(state.targetGeneIds);
+      if (targets.length) payload.targets = targets;
     }
 
     return payload;
