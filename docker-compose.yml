@@ -1,6 +1,6 @@
 services:
   backend:
-    image: frankfeng78/isotar-v2:0.2.28
+    image: frankfeng78/isotar-v2:0.3.1
     container_name: isotar-v2-backend
     # nginx (8080) inside the container fronts gunicorn workers and routes
     # /api/v1/* to the v1 app and /mirna/* to the legacy app.
@@ -38,7 +38,7 @@ services:
         # Baked into routes-manifest.json at build time; must match the
         # docker-network address of the backend service.
         API_BASE: http://backend:8080
-    image: frankfeng78/isotar-v2-frontend:0.1.11
+    image: frankfeng78/isotar-v2-frontend:0.1.12
     container_name: isotar-v2-frontend
     ports:
       - "9501:3000"
