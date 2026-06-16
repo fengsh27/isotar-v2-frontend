@@ -7,20 +7,28 @@ import {
   SPECIES_OPTIONS,
   TOOL_OPTIONS,
   isToolSupportedForSpecies,
+  isToolSupportedForWorkflow,
 } from "@/lib/constants";
 import { useWizardStore } from "@/stores/wizardStore";
 
 export function StepTools() {
   const species = useWizardStore((state) => state.species);
+  const workflow = useWizardStore((state) => state.workflow);
   const tools = useWizardStore((state) => state.tools);
   const toggleTool = useWizardStore((state) => state.toggleTool);
   const setTools = useWizardStore((state) => state.setTools);
   const next = useWizardStore((state) => state.next);
   const back = useWizardStore((state) => state.back);
 
-  // Tools available for the selected species (TargetScan is species-restricted).
+  // A tool is available when it is supported for BOTH the selected species
+  // (TargetScan is species-restricted) and the workflow (TargetScan/PITA cannot
+  // run against lncRNA targets).
+  const isAvailable = (toolValue: string) =>
+    isToolSupportedForSpecies(toolValue, species) &&
+    isToolSupportedForWorkflow(toolValue, workflow);
+
   const supportedToolValues = TOOL_OPTIONS.filter((tool) =>
-    isToolSupportedForSpecies(tool.value, species),
+    isAvailable(tool.value),
   ).map((tool) => tool.value);
   const allSelected =
     supportedToolValues.length > 0 &&
@@ -29,16 +37,18 @@ export function StepTools() {
   const speciesLabel =
     SPECIES_OPTIONS.find((option) => option.value === species)?.label ?? "this species";
 
-  // Drop any selected tool that is not supported for the current species
-  // (e.g. switching to a species where TargetScan has no reference data).
+  // Drop any selected tool that is not available for the current species or
+  // workflow (e.g. switching species/workflow where a tool has no support).
   useEffect(() => {
-    const filtered = tools.filter((tool) =>
-      isToolSupportedForSpecies(tool, species),
+    const filtered = tools.filter(
+      (tool) =>
+        isToolSupportedForSpecies(tool, species) &&
+        isToolSupportedForWorkflow(tool, workflow),
     );
     if (filtered.length !== tools.length) {
       setTools(filtered);
     }
-  }, [species, tools, setTools]);
+  }, [species, workflow, tools, setTools]);
 
   return (
     <section className="space-y-6">
@@ -72,7 +82,14 @@ export function StepTools() {
             </thead>
             <tbody>
               {TOOL_OPTIONS.map((tool) => {
-                const supported = isToolSupportedForSpecies(tool.value, species);
+                const supportedForWorkflow = isToolSupportedForWorkflow(tool.value, workflow);
+                const supportedForSpecies = isToolSupportedForSpecies(tool.value, species);
+                const supported = supportedForSpecies && supportedForWorkflow;
+                const unavailableReason = !supportedForWorkflow
+                  ? "Not available for lncRNA targets"
+                  : !supportedForSpecies
+                    ? `Not available for ${speciesLabel}`
+                    : null;
                 const checked = supported && tools.includes(tool.value);
 
                 return (
@@ -92,9 +109,9 @@ export function StepTools() {
                           className="h-4 w-4 rounded border-zinc-400 text-teal-700 focus:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                         <span className={supported ? "" : "text-zinc-400"}>{tool.label}</span>
-                        {!supported ? (
+                        {unavailableReason ? (
                           <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
-                            Not available for {speciesLabel}
+                            {unavailableReason}
                           </span>
                         ) : null}
                       </label>

@@ -169,6 +169,7 @@ export interface JobRecord {
   started_at?: number;
   finished_at?: number;
   genome?: string;
+  workflow?: WorkflowType;
   mirna_id?: string;
   operations?: string[];
   tools?: string[];
