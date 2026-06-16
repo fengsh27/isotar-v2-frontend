@@ -88,7 +88,7 @@ const initialState: Pick<
   targetGeneIds: "",
   species: "",
   config: {
-    cores: 1,
+    cores: MAX_CORES_PER_JOB,
     maxRuntime: "Default",
     outputFormat: "standard",
   },
