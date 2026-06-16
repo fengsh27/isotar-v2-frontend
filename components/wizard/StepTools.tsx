@@ -37,6 +37,14 @@ export function StepTools() {
   const speciesLabel =
     SPECIES_OPTIONS.find((option) => option.value === species)?.label ?? "this species";
 
+  // Tools gated specifically by the lncRNA workflow (TargetScan/PITA). Surfaced
+  // as one muted note below the table rather than a pill on every row.
+  const lncrnaGatedLabels = TOOL_OPTIONS.filter(
+    (tool) =>
+      !isToolSupportedForWorkflow(tool.value, workflow) &&
+      isToolSupportedForSpecies(tool.value, species),
+  ).map((tool) => tool.label);
+
   // Drop any selected tool that is not available for the current species or
   // workflow (e.g. switching species/workflow where a tool has no support).
   useEffect(() => {
@@ -99,6 +107,7 @@ export function StepTools() {
                   >
                     <td className="px-4 py-3 text-sm font-medium text-zinc-900">
                       <label
+                        title={unavailableReason ?? undefined}
                         className={`inline-flex items-center gap-3 ${supported ? "cursor-pointer" : "cursor-not-allowed"}`}
                       >
                         <input
@@ -109,11 +118,6 @@ export function StepTools() {
                           className="h-4 w-4 rounded border-zinc-400 text-teal-700 focus:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                         <span className={supported ? "" : "text-zinc-400"}>{tool.label}</span>
-                        {unavailableReason ? (
-                          <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-600">
-                            {unavailableReason}
-                          </span>
-                        ) : null}
                       </label>
                     </td>
                     <td className={`px-4 py-3 text-sm ${supported ? "text-zinc-600" : "text-zinc-400"}`}>
@@ -125,6 +129,18 @@ export function StepTools() {
             </tbody>
           </table>
         </div>
+
+        {lncrnaGatedLabels.length ? (
+          <p className="mt-3 flex items-start gap-1.5 text-[13px] text-zinc-500">
+            <span aria-hidden className="mt-px text-zinc-400">
+              &#9432;
+            </span>
+            <span>
+              {lncrnaGatedLabels.join(" & ")} don&apos;t support lncRNA targets and are
+              disabled for this workflow.
+            </span>
+          </p>
+        ) : null}
 
         <p className={`mt-4 text-sm ${tools.length ? "text-zinc-700" : "font-medium text-red-600"}`}>
           The user must select <strong>at least one</strong> prediction tool before proceeding.
