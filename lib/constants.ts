@@ -132,6 +132,25 @@ export function isToolSupportedForSpecies(
   return true;
 }
 
+/**
+ * Tools that cannot run against a lncRNA target pool: TargetScan ignores the
+ * target FASTA and reads its own precomputed 3' UTR datasets, and PITA scores
+ * in a 3' UTR context. Mirrors LNCRNA_INCOMPATIBLE_TOOLS in the backend
+ * (app_v1/app.py, v2/mirna_predicting.py), which rejects them at submission.
+ */
+export const LNCRNA_INCOMPATIBLE_TOOLS = new Set<string>(["Targetscan", "PITA"]);
+
+/** Whether a prediction tool is available for the given workflow. */
+export function isToolSupportedForWorkflow(
+  toolValue: string,
+  workflow: WorkflowType,
+): boolean {
+  if (workflow === "mir-lncrna") {
+    return !LNCRNA_INCOMPATIBLE_TOOLS.has(toolValue);
+  }
+  return true;
+}
+
 export const SPECIES_OPTIONS = [
   { value: "9606",  label: "Homo sapiens",                        subtitle: "Homo sapiens — Human (Taxonomy ID: 9606)",                         genome: null,  file: "hg19 / hg38 (user choice)" },
   { value: "6239",  label: "Caenorhabditis elegans",              subtitle: "Caenorhabditis elegans — Roundworm (Taxonomy ID: 6239)",            genome: "cel", file: "cel_WBcel235_3UTRs.fasta" },

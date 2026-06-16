@@ -7,19 +7,23 @@ import { EnrichmentPanel } from "@/components/job/EnrichmentPanel";
 import { PredictedGenesTable } from "@/components/job/PredictedGenesTable";
 import { VennDiagram } from "@/components/job/VennDiagram";
 import { enrichmentOrganismForGenome } from "@/lib/constants";
-import type { VennData } from "@/lib/types";
+import type { VennData, WorkflowType } from "@/lib/types";
 
 interface Props {
   jobId: string;
   mirnaId?: string;
   genome?: string;
+  workflow?: WorkflowType;
 }
 
-export function JobResults({ jobId, mirnaId, genome }: Props) {
+export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
   const [venn, setVenn] = useState<VennData | null>(null);
 
-  // Enrichment is only available for species with a supported Enrichr organism.
-  const enrichmentOrganism = enrichmentOrganismForGenome(genome);
+  // Enrichment requires protein-coding gene symbols, so it is offered only for
+  // the gene (miR-Target) workflow AND species with a supported Enrichr organism.
+  // lncRNA targets have no gene-symbol identity, so it is hidden for mir-lncrna.
+  const enrichmentOrganism =
+    workflow === "mir-lncrna" ? null : enrichmentOrganismForGenome(genome);
 
   const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
   const downloadUrl = `${apiBase}/api/v1/jobs/${jobId}/result/download`;

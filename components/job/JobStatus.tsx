@@ -267,7 +267,7 @@ export function JobStatus({ jobId }: { jobId: string }) {
       ) : null}
 
       {job?.status === "succeeded" ? (
-        <JobResults jobId={jobId} mirnaId={job.mirna_id} genome={job.genome} />
+        <JobResults jobId={jobId} mirnaId={job.mirna_id} genome={job.genome} workflow={job.workflow} />
       ) : (
         <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
           {isFinished
