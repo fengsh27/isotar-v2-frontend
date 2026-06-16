@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.12](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.11...v0.1.12) (2026-06-16)
+
+
+### Features
+
+* **lncrna:** gate TargetScan/PITA and enrichment for the miR-LncRNA workflow ([b9adcc2](https://github.com/fengsh27/isotar-v2-frontend/commit/b9adcc2a48942e36e62688d451ad4be07db44e0f))
+
 ### [0.1.11](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.9...v0.1.11) (2026-06-09)
 
 ### [0.1.10](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.9...v0.1.10) (2026-06-09)
