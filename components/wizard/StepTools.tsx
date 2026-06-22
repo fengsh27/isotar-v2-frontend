@@ -21,7 +21,7 @@ export function StepTools() {
   const back = useWizardStore((state) => state.back);
 
   // A tool is available when it is supported for BOTH the selected species
-  // (TargetScan is species-restricted) and the workflow (TargetScan/PITA cannot
+  // (TargetScan is species-restricted) and the workflow (TargetScan cannot
   // run against lncRNA targets).
   const isAvailable = (toolValue: string) =>
     isToolSupportedForSpecies(toolValue, species) &&
@@ -37,7 +37,7 @@ export function StepTools() {
   const speciesLabel =
     SPECIES_OPTIONS.find((option) => option.value === species)?.label ?? "this species";
 
-  // Tools gated specifically by the lncRNA workflow (TargetScan/PITA). Surfaced
+  // Tools gated specifically by the lncRNA workflow (TargetScan). Surfaced
   // as one muted note below the table rather than a pill on every row.
   const lncrnaGatedLabels = TOOL_OPTIONS.filter(
     (tool) =>

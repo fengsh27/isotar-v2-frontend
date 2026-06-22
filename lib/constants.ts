@@ -134,11 +134,12 @@ export function isToolSupportedForSpecies(
 
 /**
  * Tools that cannot run against a lncRNA target pool: TargetScan ignores the
- * target FASTA and reads its own precomputed 3' UTR datasets, and PITA scores
- * in a 3' UTR context. Mirrors LNCRNA_INCOMPATIBLE_TOOLS in the backend
+ * target FASTA and reads its own precomputed 3' UTR datasets. (PITA is fine --
+ * it scores whatever FASTA is passed to its -utr flag, so the lncRNA reference
+ * is fed there directly.) Mirrors LNCRNA_INCOMPATIBLE_TOOLS in the backend
  * (app_v1/app.py, v2/mirna_predicting.py), which rejects them at submission.
  */
-export const LNCRNA_INCOMPATIBLE_TOOLS = new Set<string>(["Targetscan", "PITA"]);
+export const LNCRNA_INCOMPATIBLE_TOOLS = new Set<string>(["Targetscan"]);
 
 /** Whether a prediction tool is available for the given workflow. */
 export function isToolSupportedForWorkflow(

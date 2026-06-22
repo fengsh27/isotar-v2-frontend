@@ -38,7 +38,7 @@ services:
         # Baked into routes-manifest.json at build time; must match the
         # docker-network address of the backend service.
         API_BASE: http://backend:8080
-    image: frankfeng78/isotar-v2-frontend:0.1.12
+    image: frankfeng78/isotar-v2-frontend:0.1.14
     container_name: isotar-v2-frontend
     ports:
       - "9501:3000"
