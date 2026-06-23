@@ -1,6 +1,7 @@
 import type {
   CreateJobPayload,
   CreateJobResponse,
+  CreateNetworkJobPayload,
   EnrichmentResult,
   EnrichmentRunRequest,
   EnrichmentRunResponse,
@@ -9,6 +10,7 @@ import type {
   JobResultsResponse,
   KillJobResponse,
   MirnaValidationResponse,
+  NetworkResponse,
 } from "@/lib/types";
 
 // When empty the browser sends relative requests (e.g. /api/v1/jobs), which are
@@ -84,8 +86,30 @@ export async function createJob(
   });
 }
 
+export async function createNetworkJob(
+  payload: CreateNetworkJobPayload,
+): Promise<CreateJobResponse> {
+  return fetchJson<CreateJobResponse>("/api/v1/jobs", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getJob(jobId: string): Promise<JobRecord> {
   return fetchJson<JobRecord>(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
+}
+
+export async function getNetwork(
+  jobId: string,
+  params: { topGenes?: number; topLncrna?: number } = {},
+): Promise<NetworkResponse> {
+  const query = new URLSearchParams();
+  if (params.topGenes !== undefined) query.set("topGenes", String(params.topGenes));
+  if (params.topLncrna !== undefined) query.set("topLncrna", String(params.topLncrna));
+  const qs = query.toString() ? `?${query.toString()}` : "";
+  return fetchJson<NetworkResponse>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/network${qs}`,
+  );
 }
 
 export async function killJob(jobId: string): Promise<KillJobResponse> {

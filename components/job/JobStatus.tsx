@@ -188,7 +188,10 @@ export function JobStatus({ jobId }: { jobId: string }) {
         {job ? (
           <div className="mt-4 grid gap-2 text-sm text-zinc-600 md:grid-cols-3">
             <p>
-              <strong>miRNA:</strong> {job.mirna_id ?? "—"}
+              <strong>miRNA{job.mirna_ids && job.mirna_ids.length > 1 ? "s" : ""}:</strong>{" "}
+              {job.mirna_ids && job.mirna_ids.length
+                ? `${job.mirna_ids.length} selected`
+                : job.mirna_id ?? "—"}
               {job.pre_id ? ` (${job.pre_id})` : ""}
             </p>
             <p>

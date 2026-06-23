@@ -43,6 +43,7 @@ export const STEP_CONTEXT_TARGET: Record<number, string> = {
 export const WORKFLOW_LABELS: Record<WorkflowType, string> = {
   "mir-target": "miR-Target Prediction",
   "mir-lncrna": "miR-LncRNA Prediction",
+  "mir-network": "miR-Network Visualization",
 };
 
 export const OPERATION_OPTIONS: {

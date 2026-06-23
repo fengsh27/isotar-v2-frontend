@@ -1,6 +1,6 @@
 export type OperationType = "shift" | "modification";
 
-export type WorkflowType = "mir-target" | "mir-lncrna";
+export type WorkflowType = "mir-target" | "mir-lncrna" | "mir-network";
 
 export type JobStatusValue =
   | "queued"
@@ -27,6 +27,70 @@ export interface CreateJobPayload {
   shift?: string;
   pre_id?: string;
   targets?: string[];
+}
+
+/** One hypothesized ceRNA (gene, lncRNA) pair supplied for a network job. */
+export interface NetworkPairInput {
+  gene: string;
+  lncrna: string;
+}
+
+/** Payload for the mir-network workflow: a list of miRNAs run against both the
+ *  gene and lncRNA pools, with optional ceRNA pairs. */
+export interface CreateNetworkJobPayload {
+  workflow: "mir-network";
+  mirna_ids: string[];
+  tools: string[];
+  genome?: string;
+  cores?: number;
+  pairs?: NetworkPairInput[];
+}
+
+export type NetworkNodeType = "gene" | "mirna" | "lncrna";
+
+export interface NetworkNode {
+  id: string;
+  type: NetworkNodeType;
+  label: string;
+  name?: string | null;
+}
+
+export interface NetworkEdge {
+  /** gene_id or mirna_id depending on `side`. */
+  source: string;
+  /** mirna_id or lncrna_id depending on `side`. */
+  target: string;
+  /** "gene" = gene↔miRNA edge; "lncrna" = miRNA↔lncRNA edge. */
+  side: "gene" | "lncrna";
+  tools: string[];
+  tool_count: number;
+}
+
+export interface NetworkPair {
+  gene: string;
+  gene_input?: string | null;
+  gene_label: string;
+  lncrna: string;
+  bridge_mirnas: string[];
+}
+
+export interface NetworkSummary {
+  mode: "pairs" | "discovery";
+  gene_count: number;
+  mirna_count: number;
+  lncrna_count: number;
+  edge_count: number;
+  pair_count: number;
+  truncated: boolean;
+}
+
+export interface NetworkResponse {
+  job_id: string;
+  mode: "pairs" | "discovery";
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  pairs: NetworkPair[];
+  summary: NetworkSummary;
 }
 
 export interface MirnaValidationResponse {
@@ -171,6 +235,8 @@ export interface JobRecord {
   genome?: string;
   workflow?: WorkflowType;
   mirna_id?: string;
+  mirna_ids?: string[];
+  pair_count?: number;
   operations?: string[];
   tools?: string[];
   cores?: number;

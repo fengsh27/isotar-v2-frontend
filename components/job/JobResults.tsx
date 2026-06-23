@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Tab, Tabs } from "@heroui/react";
 
 import { EnrichmentPanel } from "@/components/job/EnrichmentPanel";
+import { NetworkPanel } from "@/components/job/NetworkPanel";
 import { PredictedGenesTable } from "@/components/job/PredictedGenesTable";
 import { VennDiagram } from "@/components/job/VennDiagram";
 import { enrichmentOrganismForGenome } from "@/lib/constants";
@@ -27,13 +28,18 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
 
   const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
   const downloadUrl = `${apiBase}/api/v1/jobs/${jobId}/result/download`;
+  const isNetwork = workflow === "mir-network";
 
   return (
     <section className="surface-panel rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">Results</h2>
-          {mirnaId ? (
+          {isNetwork ? (
+            <p className="text-sm text-zinc-600">
+              gene ↔ miRNA ↔ lncRNA interaction network
+            </p>
+          ) : mirnaId ? (
             <p className="text-sm text-zinc-600">
               Predicted targets of{" "}
               <span className="font-medium text-zinc-800">{mirnaId}</span>
@@ -51,6 +57,10 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
           Download Results (.zip)
         </Button>
       </div>
+
+      {isNetwork ? (
+        <NetworkPanel jobId={jobId} />
+      ) : (
       <Tabs aria-label="Result sections" variant="underlined">
         <Tab key="targets" title="Predicted Targets">
           <div className="mt-4 space-y-6">
@@ -65,6 +75,7 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
           </Tab>
         ) : null}
       </Tabs>
+      )}
     </section>
   );
 }
