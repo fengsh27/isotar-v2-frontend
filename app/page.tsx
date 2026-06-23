@@ -50,6 +50,9 @@ export default function Home() {
               <DropdownItem key="/run?workflow=mir-lncrna&new=1">
                 miR-LncRNA Prediction
               </DropdownItem>
+              <DropdownItem key="/network">
+                miR-Network Visualization
+              </DropdownItem>
             </DropdownMenu>
           </Dropdown>
           <Button
@@ -190,6 +193,9 @@ export default function Home() {
             </DropdownItem>
             <DropdownItem key="/run?workflow=mir-lncrna&new=1">
               miR-LncRNA Prediction
+            </DropdownItem>
+            <DropdownItem key="/network">
+              miR-Network Visualization
             </DropdownItem>
           </DropdownMenu>
         </Dropdown>
