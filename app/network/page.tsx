@@ -1,4 +1,4 @@
-import { NetworkRunClient } from "@/components/network/NetworkRunClient";
+import { NetworkPageClient } from "@/components/wizard-network/NetworkPageClient";
 
 export const metadata = {
   title: "miR-Network Visualization — isoTar",
@@ -7,5 +7,5 @@ export const metadata = {
 };
 
 export default function NetworkPage() {
-  return <NetworkRunClient />;
+  return <NetworkPageClient />;
 }
