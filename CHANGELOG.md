@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.17](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.16...v0.1.17) (2026-06-25)
+
+
+### Features
+
+* **network:** mir-network run flow + Cytoscape visualization ([452b2d7](https://github.com/fengsh27/isotar-v2-frontend/commit/452b2d780765c77332602f82a6b69440e67e7d1e))
+* **network:** rebuild mir-network run flow as a 6-step wizard ([24a2e49](https://github.com/fengsh27/isotar-v2-frontend/commit/24a2e4995b4b17b21806a330b8758f4c5b82024c))
+* **wizard:** enforce mature-seq length 17-30 and require name for custom miRNA ([48f9bdc](https://github.com/fengsh27/isotar-v2-frontend/commit/48f9bdcadd8a9e4d07a047ef054e68102e46f49c))
+
 ### [0.1.16](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.15...v0.1.16) (2026-06-22)
 
 
