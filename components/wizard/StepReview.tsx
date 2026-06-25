@@ -14,6 +14,7 @@ import { useWizardStore } from "@/stores/wizardStore";
 function buildManifestPreview(args: {
   mirnaId: string;
   customMirnaSeq?: string;
+  customMirnaName?: string;
   useCustomMirnaSeq: boolean;
   preId: string;
   operationType?: string;
@@ -30,7 +31,10 @@ function buildManifestPreview(args: {
     workflow: args.workflow,
     input: {
       mirna: args.useCustomMirnaSeq
-        ? { seq: args.customMirnaSeq?.replace(/\s/g, "").toUpperCase() }
+        ? {
+            id: args.customMirnaName?.trim(),
+            seq: args.customMirnaSeq?.replace(/\s/g, "").toUpperCase(),
+          }
         : {
             id: args.mirnaId,
             ...(args.preId ? { pre_id: args.preId } : {}),
@@ -66,6 +70,7 @@ export function StepReview() {
 
   const mirnaId = useWizardStore((state) => state.mirnaId);
   const customMirnaSeq = useWizardStore((state) => state.customMirnaSeq);
+  const customMirnaName = useWizardStore((state) => state.customMirnaName);
   const useCustomMirnaSeq = useWizardStore((state) => state.useCustomMirnaSeq);
   const preId = useWizardStore((state) => state.preId);
   const humanReference = useWizardStore((state) => state.humanReference);
@@ -100,6 +105,7 @@ export function StepReview() {
   const manifestPreview = buildManifestPreview({
     mirnaId,
     customMirnaSeq,
+    customMirnaName,
     useCustomMirnaSeq,
     preId,
     operationType: opState.operationType,
@@ -167,7 +173,10 @@ export function StepReview() {
         </p>
         {useCustomMirnaSeq ? (
           <div>
-            <p><strong>miRNA:</strong> <span className="font-mono text-xs">(custom sequence)</span></p>
+            <p>
+              <strong>miRNA:</strong> {customMirnaName.trim() || <span className="text-zinc-500">(name not set)</span>}{" "}
+              <span className="font-mono text-xs text-zinc-500">(custom sequence)</span>
+            </p>
             <code className="mt-1 inline-block break-all rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-900">
               {customMirnaSeq.replace(/\s/g, "").toUpperCase()}
             </code>

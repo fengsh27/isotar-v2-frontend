@@ -11,6 +11,9 @@ import {
 import { useWizardStore } from "@/stores/wizardStore";
 import { loadMirnaDataset, resolvePrecursor, type MirnaRecord } from "@/lib/mirnaData";
 
+const MIN_MATURE_LENGTH = 17;
+const MAX_MATURE_LENGTH = 30;
+
 function buildCaretLine(length: number, start: number, end: number): string {
   const safeStart = Math.min(Math.max(1, start), length);
   const safeEnd = Math.min(Math.max(1, end), length);
@@ -218,13 +221,17 @@ export function StepOperation() {
     shiftRight,
   ]);
 
-  const shiftLengthTooShort = useMemo(() => {
-    const hasShiftInput = shiftLeft.trim() !== "" || shiftRight.trim() !== "";
-    if (!hasShiftInput || !shiftedMatureSequence) return false;
-    return shiftedMatureSequence.sequence.length < 17;
-  }, [shiftLeft, shiftRight, shiftedMatureSequence]);
-
   const modificationReferenceSeq = shiftedMatureSequence?.sequence ?? selectedRecord?.mature_seq ?? "";
+
+  const matureLengthState = useMemo(() => {
+    if (!modificationReferenceSeq) {
+      return { invalid: false, tooShort: false, tooLong: false, length: 0 };
+    }
+    const length = modificationReferenceSeq.length;
+    const tooShort = length < MIN_MATURE_LENGTH;
+    const tooLong = length > MAX_MATURE_LENGTH;
+    return { invalid: tooShort || tooLong, tooShort, tooLong, length };
+  }, [modificationReferenceSeq]);
 
   useEffect(() => {
     if (!modifications.length) {
@@ -332,11 +339,15 @@ export function StepOperation() {
             />
           ) : null}
 
-          {shiftLengthTooShort ? (
+          {matureLengthState.invalid ? (
             <Alert
               color="danger"
-              title="Shifted sequence is too short."
-              description={`The resulting mature sequence has ${shiftedMatureSequence?.sequence.length ?? 0} nt. Minimum required is 17 nt.`}
+              title={
+                matureLengthState.tooShort
+                  ? "Shifted sequence is too short."
+                  : "Shifted sequence is too long."
+              }
+              description={`The resulting mature sequence has ${matureLengthState.length} nt. Allowed length is ${MIN_MATURE_LENGTH}–${MAX_MATURE_LENGTH} nt.`}
               variant="flat"
             />
           ) : null}
@@ -456,6 +467,19 @@ export function StepOperation() {
             />
           ) : null}
 
+          {matureLengthState.invalid ? (
+            <Alert
+              color="danger"
+              title={
+                matureLengthState.tooShort
+                  ? "Mature sequence is too short to modify."
+                  : "Mature sequence is too long to modify."
+              }
+              description={`The mature sequence has ${matureLengthState.length} nt. Allowed length is ${MIN_MATURE_LENGTH}–${MAX_MATURE_LENGTH} nt. Go back to Shift and adjust the boundaries.`}
+              variant="flat"
+            />
+          ) : null}
+
           {shiftBoundaryValidation.hasInvalidBoundary ? (
             <p className="text-sm font-medium text-red-600">
               Shift boundary is invalid: left index must be less than or equal to right index.
@@ -474,7 +498,7 @@ export function StepOperation() {
             <Button
               color="primary"
               onPress={() => setOperationSubstep("modification")}
-              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary || shiftLengthTooShort}
+              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary || matureLengthState.invalid}
             >
               Next: Modification
             </Button>
@@ -487,7 +511,7 @@ export function StepOperation() {
             <Button
               color="primary"
               onPress={next}
-              isDisabled={!operationState.isValid || shiftBoundaryValidation.hasInvalidBoundary}
+              isDisabled={!operationState.isValid || shiftBoundaryValidation.hasInvalidBoundary || matureLengthState.invalid}
             >
               Next: Prediction Tools
             </Button>
