@@ -11,6 +11,10 @@ interface NetworkWizardState {
   species: string;
   humanReference: "hg19" | "hg38" | "";
   selectedMirnas: string[];
+  /** Per-miRNA precursor choice. Keyed by miRNA ID; only populated for miRNAs
+   *  that map to multiple precursors (single-precursor miRNAs are unambiguous
+   *  and need no entry). */
+  preIds: Record<string, string>;
   pairsText: string;
   tools: string[];
   cores: number;
@@ -18,6 +22,7 @@ interface NetworkWizardState {
   setHumanReference: (humanReference: "hg19" | "hg38" | "") => void;
   toggleMirna: (id: string) => void;
   setSelectedMirnas: (ids: string[]) => void;
+  setPreId: (mirnaId: string, preId: string) => void;
   setPairsText: (text: string) => void;
   toggleTool: (tool: string) => void;
   setTools: (tools: string[]) => void;
@@ -35,6 +40,7 @@ const initialState: Pick<
   | "species"
   | "humanReference"
   | "selectedMirnas"
+  | "preIds"
   | "pairsText"
   | "tools"
   | "cores"
@@ -43,6 +49,7 @@ const initialState: Pick<
   species: "",
   humanReference: "",
   selectedMirnas: [],
+  preIds: {},
   pairsText: "",
   tools: [],
   cores: MAX_CORES_PER_JOB,
@@ -53,12 +60,31 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
   setSpecies: (species) => set({ species }),
   setHumanReference: (humanReference) => set({ humanReference }),
   toggleMirna: (id) =>
-    set((state) => ({
-      selectedMirnas: state.selectedMirnas.includes(id)
-        ? state.selectedMirnas.filter((m) => m !== id)
-        : [...state.selectedMirnas, id],
-    })),
-  setSelectedMirnas: (selectedMirnas) => set({ selectedMirnas }),
+    set((state) => {
+      if (state.selectedMirnas.includes(id)) {
+        // Deselecting — drop any precursor choice held for this miRNA.
+        const preIds = Object.fromEntries(
+          Object.entries(state.preIds).filter(([key]) => key !== id),
+        );
+        return {
+          selectedMirnas: state.selectedMirnas.filter((m) => m !== id),
+          preIds,
+        };
+      }
+      return { selectedMirnas: [...state.selectedMirnas, id] };
+    }),
+  setSelectedMirnas: (selectedMirnas) =>
+    set((state) => {
+      // Prune precursor choices for miRNAs no longer selected (e.g. after a
+      // species change drops out-of-catalog selections).
+      const keep = new Set(selectedMirnas);
+      const preIds = Object.fromEntries(
+        Object.entries(state.preIds).filter(([id]) => keep.has(id)),
+      );
+      return { selectedMirnas, preIds };
+    }),
+  setPreId: (mirnaId, preId) =>
+    set((state) => ({ preIds: { ...state.preIds, [mirnaId]: preId } })),
   setPairsText: (pairsText) => set({ pairsText }),
   toggleTool: (tool) =>
     set((state) => ({
@@ -96,6 +122,16 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
 
     const pairs = parsePairs(state.pairsText);
     if (pairs.length) payload.pairs = pairs;
+
+    // Only forward precursor choices for currently-selected miRNAs. Backend
+    // treats `pre_ids` as optional and defaults to its own resolution when an
+    // entry is absent, so single-precursor miRNAs are intentionally omitted.
+    const preIds = Object.fromEntries(
+      Object.entries(state.preIds).filter(
+        ([id, preId]) => preId && state.selectedMirnas.includes(id),
+      ),
+    );
+    if (Object.keys(preIds).length) payload.pre_ids = preIds;
 
     return payload;
   },

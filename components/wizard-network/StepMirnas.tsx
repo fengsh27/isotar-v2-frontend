@@ -10,8 +10,10 @@ import { useNetworkWizardStore } from "@/stores/networkWizardStore";
 export function StepMirnas() {
   const species = useNetworkWizardStore((state) => state.species);
   const selectedMirnas = useNetworkWizardStore((state) => state.selectedMirnas);
+  const preIds = useNetworkWizardStore((state) => state.preIds);
   const toggleMirna = useNetworkWizardStore((state) => state.toggleMirna);
   const setSelectedMirnas = useNetworkWizardStore((state) => state.setSelectedMirnas);
+  const setPreId = useNetworkWizardStore((state) => state.setPreId);
   const back = useNetworkWizardStore((state) => state.back);
   const next = useNetworkWizardStore((state) => state.next);
 
@@ -64,8 +66,32 @@ export function StepMirnas() {
     return term ? mirnaIds.filter((id) => id.toLowerCase().includes(term)) : mirnaIds;
   }, [mirnaIds, query]);
 
+  // Selected miRNAs that map to more than one precursor — these need an
+  // explicit precursor choice so the backend doesn't have to guess.
+  const multiPrecursor = useMemo(
+    () =>
+      selectedMirnas
+        .map((id) => ({ id, records: dataset?.[id] ?? [] }))
+        .filter((m) => m.records.length > 1)
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    [selectedMirnas, dataset],
+  );
+
   const overLimit = selectedMirnas.length > MAX_NETWORK_MIRNAS;
   const canProceed = selectedMirnas.length > 0 && !overLimit;
+
+  // Toggle selection, defaulting multi-precursor miRNAs to their first
+  // precursor so a choice is always recorded before submission.
+  const handleToggle = (id: string) => {
+    const wasSelected = selectedMirnas.includes(id);
+    toggleMirna(id);
+    if (!wasSelected) {
+      const records = dataset?.[id] ?? [];
+      if (records.length > 1 && !preIds[id]) {
+        setPreId(id, records[0].pre_id);
+      }
+    }
+  };
 
   return (
     <section className="space-y-6">
@@ -110,7 +136,7 @@ export function StepMirnas() {
                   size="sm"
                   variant="flat"
                   color="primary"
-                  onClose={() => toggleMirna(id)}
+                  onClose={() => handleToggle(id)}
                 >
                   {id}
                 </Chip>
@@ -146,7 +172,7 @@ export function StepMirnas() {
                     type="button"
                     onClick={() => {
                       if (disabled) return;
-                      toggleMirna(id);
+                      handleToggle(id);
                     }}
                     disabled={disabled}
                     className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${checked
@@ -163,6 +189,41 @@ export function StepMirnas() {
               })}
             </div>
           </div>
+
+          {multiPrecursor.length ? (
+            <div className="space-y-3 rounded-xl border border-zinc-200 bg-white/80 p-3">
+              <div>
+                <p className="text-sm font-medium text-zinc-800">Precursor selection</p>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  These miRNAs map to multiple precursors. Choose which precursor each
+                  should use; the rest default automatically.
+                </p>
+              </div>
+              {multiPrecursor.map(({ id, records }) => (
+                <div
+                  key={id}
+                  className="grid gap-1 sm:grid-cols-[180px_1fr] sm:items-center"
+                >
+                  <span className="font-mono text-xs text-zinc-700">{id}</span>
+                  <select
+                    aria-label={`Precursor for ${id}`}
+                    value={preIds[id] ?? records[0].pre_id}
+                    onChange={(e) => setPreId(id, e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  >
+                    {records.map((record) => (
+                      <option
+                        key={`${record.pre_id}-${record.pre_acc}`}
+                        value={record.pre_id}
+                      >
+                        {record.pre_id} ({record.pre_acc})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
 
