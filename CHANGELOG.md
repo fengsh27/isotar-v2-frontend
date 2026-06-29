@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.18](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.17...v0.1.18) (2026-06-29)
+
+
+### Features
+
+* **network:** support per-miRNA precursor (pre_id) selection ([cb79dcb](https://github.com/fengsh27/isotar-v2-frontend/commit/cb79dcb39e029f31fddf18acba8171891dcdcb8a))
+
 ### [0.1.17](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.16...v0.1.17) (2026-06-25)
 
 
