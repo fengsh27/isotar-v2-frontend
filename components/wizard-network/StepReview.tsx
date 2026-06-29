@@ -16,6 +16,7 @@ export function StepReview() {
   const species = useNetworkWizardStore((state) => state.species);
   const humanReference = useNetworkWizardStore((state) => state.humanReference);
   const selectedMirnas = useNetworkWizardStore((state) => state.selectedMirnas);
+  const preIds = useNetworkWizardStore((state) => state.preIds);
   const pairsText = useNetworkWizardStore((state) => state.pairsText);
   const tools = useNetworkWizardStore((state) => state.tools);
   const cores = useNetworkWizardStore((state) => state.cores);
@@ -28,6 +29,17 @@ export function StepReview() {
 
   const payload = toJobPayload();
   const pairs = useMemo(() => parsePairs(pairsText), [pairsText]);
+  // Precursor choices scoped to currently-selected miRNAs (matches payload).
+  const scopedPreIds = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(preIds).filter(
+          ([id, preId]) => preId && selectedMirnas.includes(id),
+        ),
+      ),
+    [preIds, selectedMirnas],
+  );
+  const hasPreIds = Object.keys(scopedPreIds).length > 0;
   const mode: "pairs" | "discovery" = pairs.length ? "pairs" : "discovery";
 
   const speciesSubtitle =
@@ -39,7 +51,10 @@ export function StepReview() {
 
   const manifestPreview = {
     workflow: "mir-network",
-    input: { mirna_ids: selectedMirnas },
+    input: {
+      mirna_ids: selectedMirnas,
+      ...(hasPreIds ? { pre_ids: scopedPreIds } : {}),
+    },
     pairs: pairs.length ? pairs : undefined,
     mode,
     prediction: {
@@ -123,6 +138,21 @@ export function StepReview() {
             ))}
           </div>
         </div>
+        {hasPreIds ? (
+          <div className="space-y-1">
+            <p>
+              <strong>Precursors:</strong>
+            </p>
+            <ul className="ml-4 list-disc text-zinc-600">
+              {Object.entries(scopedPreIds).map(([id, preId]) => (
+                <li key={id}>
+                  <span className="font-mono">{id}</span> →{" "}
+                  <span className="font-mono">{preId}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <p>
           <strong>Mode:</strong>{" "}
           {mode === "pairs"

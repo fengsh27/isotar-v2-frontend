@@ -40,6 +40,10 @@ export interface NetworkPairInput {
 export interface CreateNetworkJobPayload {
   workflow: "mir-network";
   mirna_ids: string[];
+  /** Optional per-miRNA precursor disambiguation: `{ "<mirna_id>": "<pre_id>" }`.
+   *  Only multi-precursor miRNAs need an entry; omitted miRNAs use backend
+   *  default resolution. */
+  pre_ids?: Record<string, string>;
   tools: string[];
   genome?: string;
   cores?: number;
