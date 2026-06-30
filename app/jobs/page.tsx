@@ -6,7 +6,7 @@ import { Alert, Button, Card, CardBody, Chip, Spinner } from "@heroui/react";
 
 import { getJob, killJob } from "@/lib/api";
 import { readTrackedJobIds, untrackJobId } from "@/lib/jobStorage";
-import { STATUS_COLOR } from "@/lib/constants";
+import { STATUS_COLOR, WORKFLOW_SHORT_LABELS } from "@/lib/constants";
 import type { JobRecord } from "@/lib/types";
 
 type JobRow = {
@@ -180,7 +180,14 @@ export default function JobsPage() {
               <CardBody className="flex flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">{row.jobId}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-zinc-900">{row.jobId}</p>
+                      {row.job?.workflow ? (
+                        <Chip size="sm" variant="flat" color="secondary">
+                          {WORKFLOW_SHORT_LABELS[row.job.workflow]}
+                        </Chip>
+                      ) : null}
+                    </div>
                     <p className="text-xs text-zinc-600">
                       Created {formatDateTime(row.job?.created_at)}
                     </p>

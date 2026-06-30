@@ -68,6 +68,13 @@ export const WORKFLOW_LABELS: Record<WorkflowType, string> = {
   "mir-network": "miR-Network Visualization",
 };
 
+/** Compact module names for job summary cards (list + detail). */
+export const WORKFLOW_SHORT_LABELS: Record<WorkflowType, string> = {
+  "mir-target": "miR-Target",
+  "mir-lncrna": "miR-LncRNA",
+  "mir-network": "miR-Network",
+};
+
 export const OPERATION_OPTIONS: {
   value: OperationType;
   label: string;

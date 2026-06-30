@@ -78,12 +78,30 @@ function computeVisible(
   return { nodes, edges: keepEdges, pairs };
 }
 
+/** Narrow an already-filtered network to a single miRNA: keep that miRNA, the
+ * edges incident to it, and the genes/lncRNAs on the other end. Lets the user
+ * isolate one miRNA's bridge sub-network from the full multi-miRNA graph. */
+function focusOnMirna(visible: Visible, mirnaId: string): Visible {
+  const edges = visible.edges.filter((e) =>
+    e.side === "gene" ? e.target === mirnaId : e.source === mirnaId,
+  );
+  const keepNodeIds = new Set<string>([mirnaId]);
+  for (const e of edges) {
+    keepNodeIds.add(e.source);
+    keepNodeIds.add(e.target);
+  }
+  const nodes = visible.nodes.filter((n) => keepNodeIds.has(n.id));
+  const pairs = visible.pairs.filter((p) => p.bridges.includes(mirnaId));
+  return { nodes, edges, pairs };
+}
+
 export function NetworkPanel({ jobId }: Props) {
   const [data, setData] = useState<NetworkResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [minTools, setMinTools] = useState(1);
   const [toolFilter, setToolFilter] = useState<Set<string>>(new Set());
+  const [focusMirna, setFocusMirna] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -123,6 +141,26 @@ export function NetworkPanel({ jobId }: Props) {
     [data, minTools, toolFilter],
   );
 
+  // miRNAs that survive the current threshold/tool filter, for the focus picker.
+  const mirnaOptions = useMemo(
+    () =>
+      (visible?.nodes ?? [])
+        .filter((n) => n.type === "mirna")
+        .map((n) => ({ id: n.id, label: n.label }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [visible],
+  );
+
+  // Ignore a stale focus selection that no longer survives the filters.
+  const effectiveFocus =
+    focusMirna && mirnaOptions.some((m) => m.id === focusMirna) ? focusMirna : "";
+
+  const displayed = useMemo(
+    () =>
+      visible && effectiveFocus ? focusOnMirna(visible, effectiveFocus) : visible,
+    [visible, effectiveFocus],
+  );
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-zinc-600">
@@ -133,7 +171,7 @@ export function NetworkPanel({ jobId }: Props) {
   if (error) {
     return <Alert color="danger" variant="flat" title={error} />;
   }
-  if (!data || !visible) {
+  if (!data || !visible || !displayed) {
     return <Alert color="warning" variant="flat" title="No network data available." />;
   }
 
@@ -152,11 +190,16 @@ export function NetworkPanel({ jobId }: Props) {
           {data.mode === "pairs" ? "ceRNA pairs" : "Discovery"}
         </Chip>
         <span className="text-zinc-600">
-          {visible.nodes.filter((n) => n.type === "gene").length} genes ·{" "}
-          {visible.nodes.filter((n) => n.type === "mirna").length} miRNAs ·{" "}
-          {visible.nodes.filter((n) => n.type === "lncrna").length} lncRNAs ·{" "}
-          {visible.edges.length} edges
+          {displayed.nodes.filter((n) => n.type === "gene").length} genes ·{" "}
+          {displayed.nodes.filter((n) => n.type === "mirna").length} miRNAs ·{" "}
+          {displayed.nodes.filter((n) => n.type === "lncrna").length} lncRNAs ·{" "}
+          {displayed.edges.length} edges
         </span>
+        {effectiveFocus ? (
+          <Chip size="sm" variant="flat" color="secondary">
+            focused on {effectiveFocus}
+          </Chip>
+        ) : null}
         {data.summary.truncated ? (
           <Chip size="sm" variant="flat" color="warning">
             truncated to top targets
@@ -176,6 +219,21 @@ export function NetworkPanel({ jobId }: Props) {
             onChange={(e) => setMinTools(Number(e.target.value))}
           />
           <span className="w-6 text-center font-mono">{minTools}</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-zinc-700">
+          <span className="font-medium">miRNA:</span>
+          <select
+            value={effectiveFocus}
+            onChange={(e) => setFocusMirna(e.target.value)}
+            className="cursor-pointer rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-800 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+          >
+            <option value="">All miRNAs ({mirnaOptions.length})</option>
+            {mirnaOptions.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
         </label>
         {allTools.length ? (
           <div className="flex flex-wrap items-center gap-1.5">
@@ -207,7 +265,7 @@ export function NetworkPanel({ jobId }: Props) {
         ) : null}
       </div>
 
-      {visible.edges.length === 0 ? (
+      {displayed.edges.length === 0 ? (
         <Alert
           color="default"
           variant="flat"
@@ -215,11 +273,11 @@ export function NetworkPanel({ jobId }: Props) {
           description="Lower the consensus k or clear the tool filter to reveal more gene↔miRNA↔lncRNA paths."
         />
       ) : (
-        <NetworkGraph nodes={visible.nodes} edges={visible.edges} />
+        <NetworkGraph nodes={displayed.nodes} edges={displayed.edges} />
       )}
 
       {/* ceRNA pair table (pairs mode) */}
-      {data.mode === "pairs" && visible.pairs.length ? (
+      {data.mode === "pairs" && displayed.pairs.length ? (
         <div className="overflow-x-auto rounded-xl border border-zinc-200">
           <table className="min-w-full text-sm">
             <thead className="bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-600">
@@ -230,7 +288,7 @@ export function NetworkPanel({ jobId }: Props) {
               </tr>
             </thead>
             <tbody>
-              {visible.pairs.map((p) => (
+              {displayed.pairs.map((p) => (
                 <tr key={`${p.gene}__${p.lncrna}`} className="border-b border-zinc-100 hover:bg-zinc-50/70">
                   <td className="px-4 py-2 font-medium text-zinc-800">{p.geneLabel}</td>
                   <td className="px-4 py-2 font-mono text-xs text-zinc-700">{p.lncrna}</td>
