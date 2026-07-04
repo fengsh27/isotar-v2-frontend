@@ -58,6 +58,10 @@ export function StepConfig() {
     e.target.value = "";
   }
 
+  const isLncrnaWorkflow = workflow === "mir-lncrna";
+  const targetType: "gene" | "lncrna" = isLncrnaWorkflow ? "lncrna" : "gene";
+  const supportsTargets = workflow === "mir-target" || isLncrnaWorkflow;
+
   // Genome for the validation request, derived the same way as StepReview:
   // human uses the chosen hg19/hg38, other species map to their genome code.
   const genome =
@@ -71,7 +75,7 @@ export function StepConfig() {
     setIsChecking(true);
     setValidationError("");
     try {
-      const res = await validateTargets(list, genome, "gene");
+      const res = await validateTargets(list, genome, targetType);
       setValidationResults(res.results);
     } catch (err) {
       setValidationResults(null);
@@ -83,8 +87,32 @@ export function StepConfig() {
     }
   }
 
+  const targetCopy = isLncrnaWorkflow
+    ? {
+        sectionTitle: "Select Target (optional)",
+        sectionSubtitle:
+          "Filter by Ensembl transcript ID (e.g. ENST00000761542) or gene ID (e.g. ENSG00000299200)",
+        textareaLabel: "Transcript / Gene IDs",
+        placeholder: "ENST00000761542\nENSG00000299200",
+        description: `One target per line (or comma-separated). Ensembl transcript IDs (e.g. ENST00000761542) or gene IDs (e.g. ENSG00000299200). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
+        malformedTitleSuffix: "look like an Ensembl / FlyBase / WormBase ID",
+        notFoundHint:
+          "Not-found targets are ignored during filtering. Ensembl transcript IDs (e.g. ENST00000761542) and gene IDs (e.g. ENSG00000299200) are accepted.",
+      }
+    : {
+        sectionTitle: "Select Target (optional)",
+        sectionSubtitle:
+          "Filter by gene label (e.g. TP53) or RefSeq ID (e.g. NM_000546)",
+        textareaLabel: "Gene Labels / Gene IDs",
+        placeholder: "TP53\nNM_000546\nBRCA1",
+        description: `One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
+        malformedTitleSuffix: "look like a gene symbol or NM_ ID",
+        notFoundHint:
+          "Not-found targets are ignored during filtering. Gene symbols (e.g. TP53) and RefSeq IDs (e.g. NM_000546) are accepted.",
+      };
+
   const targetCount = parseTargets(targetGeneIds).length;
-  const malformedTargets = findMalformedTargets(targetGeneIds);
+  const malformedTargets = findMalformedTargets(targetGeneIds, targetType);
   const tooManyTargets = targetCount > MAX_TARGETS;
   const validCount = validationResults?.filter((r) => r.valid).length ?? 0;
   const invalidCount = (validationResults?.length ?? 0) - validCount;
@@ -154,21 +182,21 @@ export function StepConfig() {
         </AccordionItem>
       </Accordion>
 
-      {workflow === "mir-target" && (
+      {supportsTargets && (
         <Accordion variant="splitted">
           <AccordionItem
             key="target"
-            aria-label="Select target genes"
-            title="Select Target (optional)"
-            subtitle="Filter by gene label (e.g. TP53) or RefSeq ID (e.g. NM_000546)"
+            aria-label="Select targets"
+            title={targetCopy.sectionTitle}
+            subtitle={targetCopy.sectionSubtitle}
           >
             <div className="space-y-3 pb-2">
               <Textarea
-                label="Gene Labels / Gene IDs"
-                placeholder={"TP53\nNM_000546\nBRCA1"}
+                label={targetCopy.textareaLabel}
+                placeholder={targetCopy.placeholder}
                 value={targetGeneIds}
                 onValueChange={handleTargetsChange}
-                description={`One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`}
+                description={targetCopy.description}
                 variant="bordered"
                 classNames={{ inputWrapper: "bg-white" }}
                 minRows={4}
@@ -237,7 +265,7 @@ export function StepConfig() {
                   variant="flat"
                   title={`${malformedTargets.length} ${
                     malformedTargets.length === 1 ? "entry doesn't" : "entries don't"
-                  } look like a gene symbol or NM_ ID`}
+                  } ${targetCopy.malformedTitleSuffix}`}
                 >
                   <span className="text-xs">
                     {malformedTargets.slice(0, 5).map((t) => `"${t}"`).join(", ")}
@@ -276,10 +304,7 @@ export function StepConfig() {
                     ))}
                   </div>
                   {invalidCount > 0 && (
-                    <p className="text-xs text-zinc-500">
-                      Not-found targets are ignored during filtering. Gene symbols (e.g. TP53)
-                      and RefSeq IDs (e.g. NM_000546) are accepted.
-                    </p>
+                    <p className="text-xs text-zinc-500">{targetCopy.notFoundHint}</p>
                   )}
                 </div>
               )}

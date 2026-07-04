@@ -100,7 +100,8 @@ export function StepReview() {
       ? humanReference || undefined
       : (SPECIES_OPTIONS.find((o) => o.value === species)?.genome ?? undefined);
 
-  const parsedTargetGeneIds = workflow === "mir-target" ? parseTargets(targetGeneIds) : [];
+  const supportsTargets = workflow === "mir-target" || workflow === "mir-lncrna";
+  const parsedTargetGeneIds = supportsTargets ? parseTargets(targetGeneIds) : [];
 
   const manifestPreview = buildManifestPreview({
     mirnaId,
@@ -254,7 +255,7 @@ export function StepReview() {
             );
           })}
         </div>
-        {workflow === "mir-target" ? (
+        {supportsTargets ? (
           <p>
             <strong>Targets:</strong>{" "}
             {parsedTargetGeneIds.length ? parsedTargetGeneIds.join(", ") : "None (all targets)"}

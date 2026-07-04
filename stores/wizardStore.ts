@@ -229,7 +229,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       payload.pre_id = state.preId;
     }
 
-    if (state.workflow === "mir-target") {
+    if (state.workflow === "mir-target" || state.workflow === "mir-lncrna") {
       const targets = parseTargets(state.targetGeneIds);
       if (targets.length) payload.targets = targets;
     }
