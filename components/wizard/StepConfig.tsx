@@ -97,7 +97,7 @@ export function StepConfig() {
         description: `One target per line (or comma-separated). Ensembl transcript IDs (e.g. ENST00000761542) or gene IDs (e.g. ENSG00000299200). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
         malformedTitleSuffix: "look like an Ensembl / FlyBase / WormBase ID",
         notFoundHint:
-          "Not-found targets are ignored during filtering. Ensembl transcript IDs (e.g. ENST00000761542) and gene IDs (e.g. ENSG00000299200) are accepted.",
+          "Remove or replace not-found targets before continuing. Only Ensembl transcript IDs (e.g. ENST00000761542) and gene IDs (e.g. ENSG00000299200) present in the reference are accepted.",
       }
     : {
         sectionTitle: "Select Target (optional)",
@@ -108,7 +108,7 @@ export function StepConfig() {
         description: `One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
         malformedTitleSuffix: "look like a gene symbol or NM_ ID",
         notFoundHint:
-          "Not-found targets are ignored during filtering. Gene symbols (e.g. TP53) and RefSeq IDs (e.g. NM_000546) are accepted.",
+          "Remove or replace not-found targets before continuing. Only gene symbols (e.g. TP53) and RefSeq IDs (e.g. NM_000546) present in the reference are accepted.",
       };
 
   const targetCount = parseTargets(targetGeneIds).length;
@@ -116,6 +116,11 @@ export function StepConfig() {
   const tooManyTargets = targetCount > MAX_TARGETS;
   const validCount = validationResults?.filter((r) => r.valid).length ?? 0;
   const invalidCount = (validationResults?.length ?? 0) - validCount;
+  // Block advancing while any target is known-bad: either it fails the local
+  // shape check, or the backend just told us it isn't in the reference. We
+  // can't know about not-found without a Check Validation click, but any
+  // known invalidity is enough to gate the Next button.
+  const hasInvalidTargets = malformedTargets.length > 0 || invalidCount > 0;
 
   return (
     <section className="space-y-6">
@@ -261,7 +266,7 @@ export function StepConfig() {
 
               {malformedTargets.length > 0 && (
                 <Alert
-                  color="warning"
+                  color="danger"
                   variant="flat"
                   title={`${malformedTargets.length} ${
                     malformedTargets.length === 1 ? "entry doesn't" : "entries don't"
@@ -269,8 +274,8 @@ export function StepConfig() {
                 >
                   <span className="text-xs">
                     {malformedTargets.slice(0, 5).map((t) => `"${t}"`).join(", ")}
-                    {malformedTargets.length > 5 ? ", …" : ""}. Double-check these — the
-                    job will still run, but unrecognized targets are ignored during filtering.
+                    {malformedTargets.length > 5 ? ", …" : ""}. Fix or remove these
+                    entries before continuing.
                   </span>
                 </Alert>
               )}
@@ -317,7 +322,11 @@ export function StepConfig() {
         <Button variant="flat" onPress={back}>
           Back: Prediction Tools
         </Button>
-        <Button color="primary" onPress={next} isDisabled={tooManyTargets}>
+        <Button
+          color="primary"
+          onPress={next}
+          isDisabled={tooManyTargets || hasInvalidTargets}
+        >
           Next: Review &amp; Run
         </Button>
       </div>
