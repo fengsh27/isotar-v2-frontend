@@ -11,6 +11,7 @@ import type {
   KillJobResponse,
   MirnaValidationResponse,
   NetworkResponse,
+  TargetValidationResponse,
 } from "@/lib/types";
 
 // When empty the browser sends relative requests (e.g. /api/v1/jobs), which are
@@ -75,6 +76,17 @@ export async function validateMiRNA(
   return fetchJson<MirnaValidationResponse>(
     `/mirna/validate?id=${encodeURIComponent(trimmed)}`,
   );
+}
+
+export async function validateTargets(
+  targets: string[],
+  genome: string,
+  targetType: "gene" | "lncrna",
+): Promise<TargetValidationResponse> {
+  return fetchJson<TargetValidationResponse>("/api/v1/targets/validate", {
+    method: "POST",
+    body: JSON.stringify({ targets, genome, target_type: targetType }),
+  });
 }
 
 export async function createJob(

@@ -109,6 +109,28 @@ export interface MirnaValidationResponse {
   };
 }
 
+export type TargetMatchedBy =
+  | "symbol"
+  | "accession"
+  | "transcript"
+  | "gene"
+  | null;
+
+export interface TargetValidationResult {
+  target: string;
+  valid: boolean;
+  matched_by: TargetMatchedBy;
+}
+
+export interface TargetValidationResponse {
+  genome: string;
+  species: string;
+  target_type: "gene" | "lncrna";
+  results: TargetValidationResult[];
+  valid_count: number;
+  invalid: string[];
+}
+
 export interface CreateJobResponse {
   job_id: string;
   task_id: string;
