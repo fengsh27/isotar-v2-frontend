@@ -35,6 +35,17 @@ export interface NetworkPairInput {
   lncrna: string;
 }
 
+/** One operation spec applied to a miRNA to produce a variant graph node.
+ *  At least one of `shift` / `modifications` must be present (backend rejects
+ *  a spec with neither). Both may be present, in which case the shift and
+ *  modifications combine into a single variant. */
+export interface NetworkVariantSpec {
+  /** `"left|right"`, both integers (may be negative). Example: `"-7|1"`. */
+  shift?: string;
+  /** `"pos:from|to"` strings; 1-based position, nucleotides A/C/G/T/U. */
+  modifications?: string[];
+}
+
 /** Payload for the mir-network workflow: a list of miRNAs run against both the
  *  gene and lncRNA pools, with optional ceRNA pairs. */
 export interface CreateNetworkJobPayload {
@@ -44,6 +55,9 @@ export interface CreateNetworkJobPayload {
    *  Only multi-precursor miRNAs need an entry; omitted miRNAs use backend
    *  default resolution. */
   pre_ids?: Record<string, string>;
+  /** Optional per-miRNA variant specs. Each spec becomes one variant graph
+   *  node alongside the (always-emitted) WT node for that miRNA. */
+  variants?: Record<string, NetworkVariantSpec[]>;
   tools: string[];
   genome?: string;
   cores?: number;
@@ -57,6 +71,10 @@ export interface NetworkNode {
   type: NetworkNodeType;
   label: string;
   name?: string | null;
+  /** miRNA nodes only: the parent miRNA id shared by a miRNA's WT and all
+   *  its variant nodes. For non-variant nodes, `base === id`. Absent on
+   *  gene/lncrna nodes. */
+  base?: string;
 }
 
 export interface NetworkEdge {

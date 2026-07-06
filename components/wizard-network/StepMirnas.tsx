@@ -7,6 +7,8 @@ import { MAX_NETWORK_MIRNAS } from "@/lib/constants";
 import { loadMirnaDataset, speciesLabel, type MirnaDataset } from "@/lib/mirnaData";
 import { useNetworkWizardStore } from "@/stores/networkWizardStore";
 
+import { NetworkVariantsSection, useVariantsValidity } from "./NetworkVariantsSection";
+
 export function StepMirnas() {
   const species = useNetworkWizardStore((state) => state.species);
   const selectedMirnas = useNetworkWizardStore((state) => state.selectedMirnas);
@@ -78,7 +80,8 @@ export function StepMirnas() {
   );
 
   const overLimit = selectedMirnas.length > MAX_NETWORK_MIRNAS;
-  const canProceed = selectedMirnas.length > 0 && !overLimit;
+  const variantsValid = useVariantsValidity(dataset);
+  const canProceed = selectedMirnas.length > 0 && !overLimit && variantsValid;
 
   // Toggle selection, defaulting multi-precursor miRNAs to their first
   // precursor so a choice is always recorded before submission.
@@ -224,6 +227,8 @@ export function StepMirnas() {
               ))}
             </div>
           ) : null}
+
+          <NetworkVariantsSection dataset={dataset} />
         </div>
       )}
 

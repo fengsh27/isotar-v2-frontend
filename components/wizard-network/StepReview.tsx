@@ -7,8 +7,19 @@ import { useRouter } from "next/navigation";
 import { createNetworkJob } from "@/lib/api";
 import { SPECIES_OPTIONS, TOOL_OPTIONS, WORKFLOW_LABELS } from "@/lib/constants";
 import { trackJobId } from "@/lib/jobStorage";
+import { evaluateOperationState } from "@/lib/operation";
 import { parsePairs } from "@/lib/pairs";
+import type { NetworkVariantSpec } from "@/lib/types";
 import { useNetworkWizardStore } from "@/stores/networkWizardStore";
+
+function describeVariantSpec(spec: NetworkVariantSpec): string {
+  const parts: string[] = [];
+  if (spec.modifications?.length) {
+    parts.push(`modified ${spec.modifications.join(",")}`);
+  }
+  if (spec.shift) parts.push(`shifted ${spec.shift}`);
+  return parts.length ? parts.join("+") : "empty";
+}
 
 export function StepReview() {
   const router = useRouter();
@@ -17,6 +28,7 @@ export function StepReview() {
   const humanReference = useNetworkWizardStore((state) => state.humanReference);
   const selectedMirnas = useNetworkWizardStore((state) => state.selectedMirnas);
   const preIds = useNetworkWizardStore((state) => state.preIds);
+  const variants = useNetworkWizardStore((state) => state.variants);
   const pairsText = useNetworkWizardStore((state) => state.pairsText);
   const tools = useNetworkWizardStore((state) => state.tools);
   const cores = useNetworkWizardStore((state) => state.cores);
@@ -40,6 +52,34 @@ export function StepReview() {
     [preIds, selectedMirnas],
   );
   const hasPreIds = Object.keys(scopedPreIds).length > 0;
+
+  // Serialize variant editors into the same shape `toJobPayload` sends —
+  // scoped to selected miRNAs, skipping empty or invalid editors so the
+  // review reflects what will actually reach the backend.
+  const scopedVariants = useMemo(() => {
+    const map: Record<string, NetworkVariantSpec[]> = {};
+    const selectedSet = new Set(selectedMirnas);
+    for (const [id, editors] of Object.entries(variants)) {
+      if (!selectedSet.has(id)) continue;
+      const specs: NetworkVariantSpec[] = [];
+      for (const v of editors) {
+        const ev = evaluateOperationState(v.rows, v.shiftLeft, v.shiftRight);
+        if (!ev.isValid) continue;
+        if (!ev.shift && ev.formattedModifications.length === 0) continue;
+        const spec: NetworkVariantSpec = {};
+        if (ev.shift) spec.shift = ev.shift;
+        if (ev.formattedModifications.length) spec.modifications = ev.formattedModifications;
+        specs.push(spec);
+      }
+      if (specs.length) map[id] = specs;
+    }
+    return map;
+  }, [variants, selectedMirnas]);
+  const variantCount = Object.values(scopedVariants).reduce((n, arr) => n + arr.length, 0);
+  const variantsMirnaCount = Object.keys(scopedVariants).length;
+  const hasVariants = variantCount > 0;
+  const totalMirnaNodes = selectedMirnas.length + variantCount;
+
   const mode: "pairs" | "discovery" = pairs.length ? "pairs" : "discovery";
 
   const speciesSubtitle =
@@ -54,6 +94,7 @@ export function StepReview() {
     input: {
       mirna_ids: selectedMirnas,
       ...(hasPreIds ? { pre_ids: scopedPreIds } : {}),
+      ...(hasVariants ? { variants: scopedVariants } : {}),
     },
     pairs: pairs.length ? pairs : undefined,
     mode,
@@ -137,6 +178,11 @@ export function StepReview() {
               </Chip>
             ))}
           </div>
+          {hasVariants ? (
+            <p className="text-xs text-zinc-500">
+              Graph will show {totalMirnaNodes} miRNA nodes: {selectedMirnas.length} WT + {variantCount} variant{variantCount === 1 ? "" : "s"}.
+            </p>
+          ) : null}
         </div>
         {hasPreIds ? (
           <div className="space-y-1">
@@ -148,6 +194,25 @@ export function StepReview() {
                 <li key={id}>
                   <span className="font-mono">{id}</span> →{" "}
                   <span className="font-mono">{preId}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {hasVariants ? (
+          <div className="space-y-1">
+            <p>
+              <strong>Variants:</strong>{" "}
+              <span className="text-zinc-600">
+                {variantCount} across {variantsMirnaCount} miRNA
+                {variantsMirnaCount === 1 ? "" : "s"}
+              </span>
+            </p>
+            <ul className="ml-4 list-disc text-zinc-600">
+              {Object.entries(scopedVariants).map(([id, specs]) => (
+                <li key={id}>
+                  <span className="font-mono">{id}</span> →{" "}
+                  {specs.map(describeVariantSpec).join(", ")}
                 </li>
               ))}
             </ul>

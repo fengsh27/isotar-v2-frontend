@@ -92,8 +92,20 @@ function buildElements(nodes: NetworkNode[], edges: NetworkEdge[]): ElementDefin
     const col = byType[type] ?? [];
     const height = (col.length - 1) * ROW_GAP;
     col.forEach((n, i) => {
+      // A miRNA is a variant when it carries a `base` distinct from its own id
+      // (see NetworkNode). Used by the style block below to add a dashed
+      // border so WT vs variant reads at a glance.
+      const isVariant =
+        n.type === "mirna" && typeof n.base === "string" && n.base !== n.id;
       els.push({
-        data: { id: n.id, label: n.label, type: n.type, title: n.name ?? n.label },
+        data: {
+          id: n.id,
+          label: n.label,
+          type: n.type,
+          title: n.name ?? n.label,
+          base: n.base ?? n.id,
+          isVariant,
+        },
         position: { x: COLUMN_X[type], y: i * ROW_GAP - height / 2 },
       });
     });
@@ -142,6 +154,20 @@ export function NetworkGraph({ nodes, edges }: Props) {
         {
           selector: 'node[type="mirna"]',
           style: { "background-color": TYPE_COLOR.mirna, "text-halign": "center" },
+        },
+        {
+          // Variant miRNA nodes: hollow with a dashed border in the same hue,
+          // so a base miRNA's WT and its variants read as one amber family
+          // while staying visually distinct. Selection border (below) still
+          // takes precedence when the user picks a node.
+          selector: 'node[type="mirna"][?isVariant]',
+          style: {
+            "background-color": "#ffffff",
+            "border-width": 2,
+            "border-style": "dashed",
+            "border-color": TYPE_COLOR.mirna,
+            "font-style": "italic",
+          },
         },
         {
           selector: 'node[type="lncrna"]',
@@ -228,9 +254,16 @@ export function NetworkGraph({ nodes, edges }: Props) {
               className="inline-block h-3 w-3 rounded-full"
               style={{ backgroundColor: TYPE_COLOR[t] }}
             />
-            {t === "mirna" ? "miRNA" : t === "lncrna" ? "lncRNA" : "gene"}
+            {t === "mirna" ? "miRNA (WT)" : t === "lncrna" ? "lncRNA" : "gene"}
           </span>
         ))}
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-3 w-3 rounded-full border-2 border-dashed bg-white"
+            style={{ borderColor: TYPE_COLOR.mirna }}
+          />
+          miRNA variant
+        </span>
         <span className="text-zinc-400">Edge thickness ∝ tool consensus.</span>
       </div>
     </div>
