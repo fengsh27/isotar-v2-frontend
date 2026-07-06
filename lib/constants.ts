@@ -34,9 +34,14 @@ export const WIZARD_STEPS = WIZARD_STEPS_LNCRNA;
 // Keep these two in sync when tuning.
 export const MAX_CORES_PER_JOB = 8;
 
-// Matches the backend's ISOTAR_MAX_NETWORK_MIRNAS env. The /api/v1/jobs endpoint
-// rejects mir-network submissions whose mirna_ids exceed this count.
-export const MAX_NETWORK_MIRNAS = 20;
+// UI cap on miRNAs per mir-network job. Stricter than the backend's
+// ISOTAR_MAX_NETWORK_MIRNAS (default 20) — the /api/v1/jobs endpoint still
+// rejects anything above the backend limit, so this only tightens the UI.
+export const MAX_NETWORK_MIRNAS = 5;
+
+// UI cap on pasted (gene, lncRNA) pairs per mir-network job. Submission is
+// blocked above this count to keep the ceRNA graph tractable.
+export const MAX_NETWORK_PAIRS = 100;
 
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
@@ -55,8 +60,8 @@ export const STEP_CONTEXT_TARGET: Record<number, string> = {
 
 export const STEP_CONTEXT_NETWORK: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
-  1: "Pick up to 20 miRNAs from the per-species catalog. The job runs every miRNA against both the gene and lncRNA pools.",
-  2: "Optionally paste (gene, lncRNA) hypotheses — pairs mode keeps only ceRNA pairs bridged by at least one miRNA. Skip for discovery mode.",
+  1: "Pick up to 5 miRNAs from the per-species catalog. The job runs every miRNA against both the gene and lncRNA pools.",
+  2: "Optionally paste up to 100 (gene, lncRNA) hypotheses — pairs mode keeps only ceRNA pairs bridged by at least one miRNA. Skip for discovery mode.",
   3: "Select one or more prediction tools. TargetScan runs on the gene pool only.",
   4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
   5: "Review your run request, then start an immutable asynchronous job.",

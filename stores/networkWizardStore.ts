@@ -1,6 +1,11 @@
 import { create } from "zustand";
 
-import { MAX_CORES_PER_JOB, MAX_NETWORK_MIRNAS, SPECIES_OPTIONS } from "@/lib/constants";
+import {
+  MAX_CORES_PER_JOB,
+  MAX_NETWORK_MIRNAS,
+  MAX_NETWORK_PAIRS,
+  SPECIES_OPTIONS,
+} from "@/lib/constants";
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
 import { parsePairs } from "@/lib/pairs";
 import type { CreateNetworkJobPayload, NetworkVariantSpec } from "@/lib/types";
@@ -192,6 +197,7 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
     }
 
     const pairs = parsePairs(state.pairsText);
+    if (pairs.length > MAX_NETWORK_PAIRS) return null;
     if (pairs.length) payload.pairs = pairs;
 
     // Only forward precursor choices for currently-selected miRNAs. Backend

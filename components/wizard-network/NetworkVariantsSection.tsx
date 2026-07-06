@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Button } from "@heroui/react";
 
 import {
@@ -8,7 +8,9 @@ import {
   evaluateOperationState,
   type NucleotideBase,
 } from "@/lib/operation";
-import { resolvePrecursor, type MirnaDataset, type MirnaRecord } from "@/lib/mirnaData";
+import { type MirnaDataset, type MirnaRecord } from "@/lib/mirnaData";
+import { baseAtPosition, resolveShiftedMature } from "@/lib/shift";
+import { PrecursorPreview, VariantMaturePreview } from "@/components/wizard/SequencePreview";
 import {
   useNetworkWizardStore,
   type NetworkVariantEditor,
@@ -16,40 +18,6 @@ import {
 
 const MIN_MATURE_LENGTH = 17;
 const MAX_MATURE_LENGTH = 30;
-
-function parseInteger(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed || !/^-?\d+$/.test(trimmed)) return null;
-  return parseInt(trimmed, 10);
-}
-
-/** Compute the shifted mature sequence for a variant, mirroring backend
- *  `apply_shift` semantics. Returns null when the shift is not fully typed or
- *  the boundaries fall outside the precursor. */
-function shiftedMature(
-  record: MirnaRecord | null,
-  shiftLeft: string,
-  shiftRight: string,
-): { seq: string; start: number; end: number; length: number } | null {
-  if (!record) return null;
-  const rp = resolvePrecursor(record);
-  const left = parseInteger(shiftLeft) ?? 0;
-  const right = parseInteger(shiftRight) ?? 0;
-  const start = rp.matureStart + left;
-  const end = rp.matureEnd + right;
-  if (start < 1 || end > rp.seq.length || end < start) return null;
-  const seq = rp.seq.slice(start - 1, end);
-  return { seq, start, end, length: seq.length };
-}
-
-function baseAtPosition(seq: string, position: string): NucleotideBase | "" {
-  const trimmed = position.trim();
-  if (!/^\d+$/.test(trimmed)) return "";
-  const idx = parseInt(trimmed, 10) - 1;
-  if (idx < 0 || idx >= seq.length) return "";
-  const b = seq[idx]?.toUpperCase() ?? "";
-  return (BASE_OPTIONS as readonly string[]).includes(b) ? (b as NucleotideBase) : "";
-}
 
 function pickRecord(
   dataset: MirnaDataset | null,
@@ -92,8 +60,9 @@ function VariantEditorView({
   onRemove,
   onUpdate,
 }: VariantEditorViewProps) {
+  const [expanded, setExpanded] = useState(true);
   const opState = evaluateOperationState(editor.rows, editor.shiftLeft, editor.shiftRight);
-  const shifted = shiftedMature(record, editor.shiftLeft, editor.shiftRight);
+  const shifted = resolveShiftedMature(record, editor.shiftLeft, editor.shiftRight);
   const referenceSeq = shifted?.seq ?? record?.mature_seq ?? "";
   const length = shifted?.length ?? referenceSeq.length;
 
@@ -116,6 +85,11 @@ function VariantEditorView({
   const boundaryInvalid = shiftFullyTyped && !shifted && record !== null;
   const tooShort = length > 0 && length < MIN_MATURE_LENGTH;
   const tooLong = length > MAX_MATURE_LENGTH;
+  const hasError =
+    opState.hasInvalidShift ||
+    opState.hasInvalidModification ||
+    boundaryInvalid ||
+    ((tooShort || tooLong) && record !== null);
 
   const addRow = () =>
     onUpdate({
@@ -131,10 +105,33 @@ function VariantEditorView({
   return (
     <div className="rounded-lg border border-zinc-200 bg-zinc-50/70 p-3">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-xs font-medium text-zinc-600">Variant {index + 1}</p>
-          <p className="mt-0.5 text-xs text-zinc-500">{summarizeVariant(editor)}</p>
-        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? "Collapse" : "Expand"} variant ${index + 1}`}
+          className="text-left"
+        >
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-flex h-4 w-4 items-center justify-center rounded border border-zinc-300 text-xs font-semibold leading-none text-zinc-600"
+            >
+              {expanded ? "−" : "+"}
+            </span>
+            <span className="text-xs font-medium text-zinc-600">
+              Variant {index + 1}
+            </span>
+          </span>
+          <span className="mt-0.5 block pl-6 text-xs text-zinc-500">
+            {summarizeVariant(editor)}
+          </span>
+          {!expanded && hasError ? (
+            <span className="mt-0.5 block pl-6 text-xs font-medium text-red-600">
+              ⚠ Needs attention
+            </span>
+          ) : null}
+        </button>
         <Button
           size="sm"
           variant="light"
@@ -146,6 +143,8 @@ function VariantEditorView({
         </Button>
       </div>
 
+      {expanded ? (
+        <>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <div>
           <label className="text-xs font-medium text-zinc-700">Left Shift</label>
@@ -167,6 +166,15 @@ function VariantEditorView({
             className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm"
           />
         </div>
+      </div>
+
+      <div className="mt-3">
+        <VariantMaturePreview
+          record={record}
+          shiftLeft={editor.shiftLeft}
+          shiftRight={editor.shiftRight}
+          rows={editor.rows}
+        />
       </div>
 
       <div className="mt-3">
@@ -276,6 +284,8 @@ function VariantEditorView({
           className="mt-3"
         />
       ) : null}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -307,6 +317,12 @@ function MirnaVariantsRow({ mirnaId, record, editors }: MirnaVariantsRowProps) {
       </div>
       {count ? (
         <div className="mt-3 space-y-3">
+          <PrecursorPreview
+            record={record}
+            shiftLeft=""
+            shiftRight=""
+            title="WT precursor reference (mature highlighted)"
+          />
           {editors.map((v, i) => (
             <VariantEditorView
               key={v.key}
@@ -341,7 +357,7 @@ export function useVariantsValidity(dataset: MirnaDataset | null): boolean {
         if (!ev.isValid) return false;
         const shiftTyped = v.shiftLeft.trim() !== "" && v.shiftRight.trim() !== "";
         if (shiftTyped) {
-          const shifted = shiftedMature(record, v.shiftLeft, v.shiftRight);
+          const shifted = resolveShiftedMature(record, v.shiftLeft, v.shiftRight);
           if (!shifted) return false;
           if (shifted.length < MIN_MATURE_LENGTH || shifted.length > MAX_MATURE_LENGTH) {
             return false;
