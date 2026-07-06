@@ -78,20 +78,31 @@ function computeVisible(
   return { nodes, edges: keepEdges, pairs };
 }
 
-/** Narrow an already-filtered network to a single miRNA: keep that miRNA, the
- * edges incident to it, and the genes/lncRNAs on the other end. Lets the user
- * isolate one miRNA's bridge sub-network from the full multi-miRNA graph. */
-function focusOnMirna(visible: Visible, mirnaId: string): Visible {
-  const edges = visible.edges.filter((e) =>
-    e.side === "gene" ? e.target === mirnaId : e.source === mirnaId,
+/** Base miRNA a (possibly variant) node belongs to. WT and all its variants
+ * share the same base, so grouping by it collapses the family into one focus
+ * entry. Falls back to the node id if the backend omitted `base`. */
+function baseOf(node: NetworkNode): string {
+  return node.base ?? node.id;
+}
+
+/** Narrow an already-filtered network to a single base miRNA: keep that miRNA's
+ * WT plus every variant node, the edges incident to any of them, and the
+ * genes/lncRNAs on the other end. Lets the user isolate one miRNA family's
+ * bridge sub-network (WT vs. its variants) from the full multi-miRNA graph. */
+function focusOnBase(visible: Visible, base: string): Visible {
+  const memberIds = new Set(
+    visible.nodes.filter((n) => n.type === "mirna" && baseOf(n) === base).map((n) => n.id),
   );
-  const keepNodeIds = new Set<string>([mirnaId]);
+  const edges = visible.edges.filter((e) =>
+    e.side === "gene" ? memberIds.has(e.target) : memberIds.has(e.source),
+  );
+  const keepNodeIds = new Set<string>(memberIds);
   for (const e of edges) {
     keepNodeIds.add(e.source);
     keepNodeIds.add(e.target);
   }
   const nodes = visible.nodes.filter((n) => keepNodeIds.has(n.id));
-  const pairs = visible.pairs.filter((p) => p.bridges.includes(mirnaId));
+  const pairs = visible.pairs.filter((p) => p.bridges.some((m) => memberIds.has(m)));
   return { nodes, edges, pairs };
 }
 
@@ -101,7 +112,7 @@ export function NetworkPanel({ jobId }: Props) {
   const [loading, setLoading] = useState(true);
   const [minTools, setMinTools] = useState(1);
   const [toolFilter, setToolFilter] = useState<Set<string>>(new Set());
-  const [focusMirna, setFocusMirna] = useState("");
+  const [focusBase, setFocusBase] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -141,23 +152,28 @@ export function NetworkPanel({ jobId }: Props) {
     [data, minTools, toolFilter],
   );
 
-  // miRNAs that survive the current threshold/tool filter, for the focus picker.
-  const mirnaOptions = useMemo(
-    () =>
-      (visible?.nodes ?? [])
-        .filter((n) => n.type === "mirna")
-        .map((n) => ({ id: n.id, label: n.label }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [visible],
-  );
+  // Base miRNA families that survive the current threshold/tool filter, for the
+  // focus picker. WT and its variants collapse into one entry keyed by base,
+  // with the surviving node count (WT + variants) shown.
+  const baseOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const n of visible?.nodes ?? []) {
+      if (n.type !== "mirna") continue;
+      const base = baseOf(n);
+      counts.set(base, (counts.get(base) ?? 0) + 1);
+    }
+    return Array.from(counts, ([base, count]) => ({ base, count })).sort((a, b) =>
+      a.base.localeCompare(b.base),
+    );
+  }, [visible]);
 
   // Ignore a stale focus selection that no longer survives the filters.
   const effectiveFocus =
-    focusMirna && mirnaOptions.some((m) => m.id === focusMirna) ? focusMirna : "";
+    focusBase && baseOptions.some((m) => m.base === focusBase) ? focusBase : "";
 
   const displayed = useMemo(
     () =>
-      visible && effectiveFocus ? focusOnMirna(visible, effectiveFocus) : visible,
+      visible && effectiveFocus ? focusOnBase(visible, effectiveFocus) : visible,
     [visible, effectiveFocus],
   );
 
@@ -224,13 +240,14 @@ export function NetworkPanel({ jobId }: Props) {
           <span className="font-medium">miRNA:</span>
           <select
             value={effectiveFocus}
-            onChange={(e) => setFocusMirna(e.target.value)}
+            onChange={(e) => setFocusBase(e.target.value)}
             className="cursor-pointer rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-800 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
           >
-            <option value="">All miRNAs ({mirnaOptions.length})</option>
-            {mirnaOptions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
+            <option value="">All miRNAs ({baseOptions.length})</option>
+            {baseOptions.map((m) => (
+              <option key={m.base} value={m.base}>
+                {m.base}
+                {m.count > 1 ? ` (WT + ${m.count - 1} variant${m.count > 2 ? "s" : ""})` : ""}
               </option>
             ))}
           </select>
