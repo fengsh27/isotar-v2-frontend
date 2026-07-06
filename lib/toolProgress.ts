@@ -90,10 +90,15 @@ export interface ProgressSummary {
 export function summarize(rows: ToolRow[], backendCurrent?: string): ProgressSummary {
   const completed = rows.filter((row) => row.status === "done").length;
   const running = rows.find((row) => row.status === "running");
+  // A run is finished once no tool is still running and every tool reached a
+  // terminal state (done or failed) -- show "Done" rather than "—".
+  const allTerminal =
+    rows.length > 0 &&
+    rows.every((row) => row.status === "done" || row.status === "failed");
   return {
     total: rows.length,
     completed,
-    current: running?.name ?? backendCurrent ?? (completed === rows.length ? "Done" : "—"),
+    current: running?.name ?? backendCurrent ?? (allTerminal ? "Done" : "—"),
   };
 }
 
