@@ -161,7 +161,7 @@ export interface KillJobResponse {
 
 export type JobStepValue = "processing" | "predicting";
 
-export type ToolProgressStatus = "pending" | "running" | "done";
+export type ToolProgressStatus = "pending" | "running" | "done" | "failed";
 
 export interface ToolProgress {
   status: ToolProgressStatus;

@@ -12,11 +12,12 @@ function formatUnix(ts: number | null): string {
 
 const TOOL_STATUS_COLOR: Record<
   ToolProgressStatus,
-  "default" | "primary" | "success"
+  "default" | "primary" | "success" | "danger"
 > = {
   pending: "default",
   running: "primary",
   done: "success",
+  failed: "danger",
 };
 
 interface Props {
