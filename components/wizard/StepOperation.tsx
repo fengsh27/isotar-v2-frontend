@@ -10,20 +10,10 @@ import {
 } from "@/lib/operation";
 import { useWizardStore } from "@/stores/wizardStore";
 import { loadMirnaDataset, resolvePrecursor, type MirnaRecord } from "@/lib/mirnaData";
+import { PrecursorPreview } from "@/components/wizard/SequencePreview";
 
 const MIN_MATURE_LENGTH = 17;
 const MAX_MATURE_LENGTH = 30;
-
-function buildCaretLine(length: number, start: number, end: number): string {
-  const safeStart = Math.min(Math.max(1, start), length);
-  const safeEnd = Math.min(Math.max(1, end), length);
-
-  if (safeStart >= safeEnd) {
-    return `${" ".repeat(safeStart - 1)}^`;
-  }
-
-  return `${" ".repeat(safeStart - 1)}^${" ".repeat(safeEnd - safeStart - 1)}^`;
-}
 
 function parseShiftPreviewValue(value: string): number {
   const trimmed = value.trim();
@@ -139,57 +129,6 @@ export function StepOperation() {
     return { hasInvalidBoundary: end < start, start, end };
   }, [selectedRecord, shiftBaseEnd, shiftBaseStart, shiftLeft, shiftRight]);
 
-  const shiftPreview = useMemo(() => {
-    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
-      return null;
-    }
-
-    const left = parseShiftPreviewValue(shiftLeft);
-    const right = parseShiftPreviewValue(shiftRight);
-    const rawStart = shiftBaseStart + left;
-    const rawEnd = shiftBaseEnd + right;
-    const length = shiftReferenceSequence.length;
-    const clampedStart = Math.min(Math.max(1, rawStart), length);
-    const clampedEnd = Math.min(Math.max(1, rawEnd), length);
-
-    return buildCaretLine(
-      length,
-      clampedStart,
-      clampedEnd,
-    );
-  }, [selectedRecord, shiftBaseEnd, shiftBaseStart, shiftLeft, shiftReferenceSequence, shiftRight]);
-
-  const precursorDisplay = useMemo(() => {
-    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
-      return null;
-    }
-
-    const left = parseShiftPreviewValue(shiftLeft);
-    const right = parseShiftPreviewValue(shiftRight);
-    const rawStart = shiftBaseStart + left;
-    const rawEnd = shiftBaseEnd + right;
-    const length = shiftReferenceSequence.length;
-    const clampedStart = Math.min(Math.max(1, rawStart), length);
-    const clampedEnd = Math.min(Math.max(1, rawEnd), length);
-
-    const highlightStart = Math.min(clampedStart, clampedEnd);
-    const highlightEnd = clampedStart >= clampedEnd ? clampedStart : clampedEnd;
-
-    return {
-      prefix: shiftReferenceSequence.slice(0, highlightStart - 1),
-      mature: shiftReferenceSequence.slice(highlightStart - 1, highlightEnd),
-      suffix: shiftReferenceSequence.slice(highlightEnd),
-      caretLine: buildCaretLine(length, clampedStart, clampedEnd),
-    };
-  }, [
-    selectedRecord,
-    shiftBaseEnd,
-    shiftBaseStart,
-    shiftLeft,
-    shiftReferenceSequence,
-    shiftRight,
-  ]);
-
   const shiftedMatureSequence = useMemo(() => {
     if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return null;
@@ -275,22 +214,11 @@ export function StepOperation() {
             </p>
           </div>
 
-          {selectedRecord ? (
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
-              <p className="text-sm font-semibold text-zinc-900">
-                Extended precursor sequence reference
-              </p>
-              <pre className="mt-2 overflow-x-auto rounded bg-white p-2 text-xs text-zinc-800">
-                {precursorDisplay?.prefix}
-                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
-                  {precursorDisplay?.mature}
-                </span>
-                {precursorDisplay?.suffix}
-                {"\n"}
-                {precursorDisplay?.caretLine ?? shiftPreview}
-              </pre>
-            </div>
-          ) : null}
+          <PrecursorPreview
+            record={selectedRecord}
+            shiftLeft={shiftLeft}
+            shiftRight={shiftRight}
+          />
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>

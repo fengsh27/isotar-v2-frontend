@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Button, Textarea } from "@heroui/react";
 
+import { MAX_NETWORK_PAIRS } from "@/lib/constants";
 import { parsePairs } from "@/lib/pairs";
 import { useNetworkWizardStore } from "@/stores/networkWizardStore";
 
@@ -14,6 +15,7 @@ export function StepPairs() {
 
   const pairs = useMemo(() => parsePairs(pairsText), [pairsText]);
   const mode: "pairs" | "discovery" = pairs.length ? "pairs" : "discovery";
+  const overLimit = pairs.length > MAX_NETWORK_PAIRS;
 
   return (
     <section className="space-y-6">
@@ -45,11 +47,20 @@ export function StepPairs() {
             Mode: {mode === "pairs" ? "ceRNA pairs" : "Discovery"}
           </span>
           {pairs.length ? (
-            <span className="text-teal-700">{pairs.length} pair(s) parsed.</span>
+            <span className={overLimit ? "font-medium text-red-600" : "text-teal-700"}>
+              {pairs.length} pair(s) parsed.
+            </span>
           ) : (
             <span className="text-zinc-500">No pairs — discovery mode will be used.</span>
           )}
         </div>
+
+        {overLimit ? (
+          <p className="text-xs font-medium text-red-600">
+            Too many pairs: {pairs.length} parsed, but at most {MAX_NETWORK_PAIRS} are
+            allowed. Remove {pairs.length - MAX_NETWORK_PAIRS} to continue.
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -62,7 +73,7 @@ export function StepPairs() {
               Clear & use discovery
             </Button>
           ) : null}
-          <Button color="primary" onPress={next}>
+          <Button color="primary" onPress={next} isDisabled={overLimit}>
             {pairs.length ? "Next: Prediction Tools" : "Skip → Prediction Tools"}
           </Button>
         </div>
