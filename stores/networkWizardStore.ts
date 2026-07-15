@@ -196,9 +196,13 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
       if (speciesOption?.genome) payload.genome = speciesOption.genome;
     }
 
-    const pairs = parsePairs(state.pairsText);
-    if (pairs.length > MAX_NETWORK_PAIRS) return null;
-    if (pairs.length) payload.pairs = pairs;
+    // Refuse submission if any pair line is malformed — StepPairs already
+    // gates Next, but this second layer keeps the payload honest if any
+    // caller reaches Review with typed-but-invalid pair rows.
+    const parsedPairs = parsePairs(state.pairsText);
+    if (parsedPairs.malformed.length) return null;
+    if (parsedPairs.pairs.length > MAX_NETWORK_PAIRS) return null;
+    if (parsedPairs.pairs.length) payload.pairs = parsedPairs.pairs;
 
     // Only forward precursor choices for currently-selected miRNAs. Backend
     // treats `pre_ids` as optional and defaults to its own resolution when an

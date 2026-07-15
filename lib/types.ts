@@ -29,10 +29,14 @@ export interface CreateJobPayload {
   targets?: string[];
 }
 
-/** One hypothesized ceRNA (gene, lncRNA) pair supplied for a network job. */
+/** One hypothesized ceRNA (gene, lncRNA, score) triple supplied for a network
+ *  job. `score` is a caller-provided ranking / correlation for the pair — the
+ *  backend requires it (a finite number, not bool) and carries it through
+ *  untouched for downstream use, though the frontend does not consume it yet. */
 export interface NetworkPairInput {
   gene: string;
   lncrna: string;
+  score: number;
 }
 
 /** One operation spec applied to a miRNA to produce a variant graph node.

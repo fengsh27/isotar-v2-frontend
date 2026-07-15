@@ -40,7 +40,7 @@ export function StepReview() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const payload = toJobPayload();
-  const pairs = useMemo(() => parsePairs(pairsText), [pairsText]);
+  const pairs = useMemo(() => parsePairs(pairsText).pairs, [pairsText]);
   // Precursor choices scoped to currently-selected miRNAs (matches payload).
   const scopedPreIds = useMemo(
     () =>

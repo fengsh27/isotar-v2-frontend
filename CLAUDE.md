@@ -173,7 +173,7 @@ Network workflow (`mir-network`):
 |---|---|---|
 | `mirna_ids` | string[] | always (1..`MAX_NETWORK_MIRNAS`) |
 | `pre_ids` | Record<mirnaId, preId> | when any selected miRNA has an explicit precursor choice |
-| `pairs` | `[gene, lncrna][]` | when ceRNA pairs mode is used (else discovery mode) |
+| `pairs` | `{gene, lncrna, score}[]` | when ceRNA pairs mode is used (else discovery mode); `score` is required per pair (finite number, not bool) and is forwarded verbatim to the backend — the frontend does not consume it yet |
 | `variants` | Record<mirnaId, NetworkVariantSpec[]> | when ≥1 selected miRNA has ≥1 non-empty variant editor |
 
 Where `NetworkVariantSpec = { shift?: string; modifications?: string[] }` — a variant with neither field is silently dropped; a variant with typed-but-invalid content blocks submission.
