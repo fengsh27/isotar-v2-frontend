@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.26](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.25...v0.1.26) (2026-07-16)
+
+
+### Features
+
+* **network:** restrict prediction to the pair targets when pairs are given ([df0e902](https://github.com/fengsh27/isotar-v2-frontend/commit/df0e9021c3619a4db59d590db6f081f38a92b8c0))
+
 ### [0.1.25](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.24...v0.1.25) (2026-07-16)
 
 
