@@ -66,6 +66,13 @@ export interface CreateNetworkJobPayload {
   genome?: string;
   cores?: number;
   pairs?: NetworkPairInput[];
+  /** Scan only the pairs' own gene/lncRNA targets instead of the whole
+   *  reference. Sent whenever `pairs` is present — a pairs run only ever
+   *  displays the pair bridges, so scanning the full genome to discard >99.9%
+   *  of it just costs hours. Requires `pairs`; the backend rejects it without.
+   *  Trade-off: /result and the result zip then carry only the pair targets,
+   *  not the genome-wide table. */
+  restrict_to_pairs?: boolean;
 }
 
 export type NetworkNodeType = "gene" | "mirna" | "lncrna";
