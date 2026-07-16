@@ -169,8 +169,17 @@ export type ToolProgressStatus = "pending" | "running" | "done" | "failed";
 
 export interface ToolProgress {
   status: ToolProgressStatus;
+  /** First time this tool started (across miRNAs and, for mir-network, pools). */
   started_at: number | null;
+  /** Last time it finished. With `started_at` this brackets the tool's work but
+   *  is NOT its duration — the bracket also spans other tools' runs. */
   finished_at: number | null;
+  /** Seconds of actual work, accumulated over every run of this tool. This is
+   *  the real "time costed". Null on jobs predating the field. */
+  elapsed?: number | null;
+  /** Start of the in-flight run, so a running tool can live-count from
+   *  `elapsed`. Null when the tool is not currently running. */
+  running_since?: number | null;
 }
 
 export interface JobProgressInfo {
