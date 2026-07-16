@@ -26,8 +26,11 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
   const enrichmentOrganism =
     workflow === "mir-lncrna" ? null : enrichmentOrganismForGenome(genome);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
-  const downloadUrl = `${apiBase}/api/v1/jobs/${jobId}/result/download`;
+  // Always same-origin: the Next.js rewrites in next.config.ts proxy this to
+  // the backend server-side. Using NEXT_PUBLIC_API_BASE here would produce an
+  // absolute cross-origin URL that browsers block as a mixed-content download
+  // whenever the page is HTTPS and the backend is HTTP (Chrome 111+).
+  const downloadUrl = `/api/v1/jobs/${jobId}/result/download`;
   const isNetwork = workflow === "mir-network";
 
   return (

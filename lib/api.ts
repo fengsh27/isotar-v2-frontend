@@ -196,7 +196,11 @@ export async function getEnrichment(jobId: string): Promise<EnrichmentResult> {
 }
 
 export function getEnrichmentDotplotUrl(jobId: string): string {
-  return toUrl(`/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment/dotplot`);
+  // Always same-origin: this URL is rendered in an <img src>, and browsers
+  // block insecure image loads on HTTPS pages. The Next.js rewrites in
+  // next.config.ts proxy this to the backend server-side, so we deliberately
+  // skip NEXT_PUBLIC_API_BASE here.
+  return `/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment/dotplot`;
 }
 
 export { ApiError };
