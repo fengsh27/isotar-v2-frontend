@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.25](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.24...v0.1.25) (2026-07-16)
+
+
+### Bug Fixes
+
+* **download:** stream result.zip through a route handler with a real timeout ([1dd49b6](https://github.com/fengsh27/isotar-v2-frontend/commit/1dd49b64f1302201f0d2a5f01eab0b457996d87e))
+* **progress:** show time costed as work done, not the bracket around it ([9468479](https://github.com/fengsh27/isotar-v2-frontend/commit/9468479b421957719dbe51172cf4cd8ca4f93844))
+
 ### [0.1.24](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.23...v0.1.24) (2026-07-16)
 
 ### [0.1.23](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.22...v0.1.23) (2026-07-15)
