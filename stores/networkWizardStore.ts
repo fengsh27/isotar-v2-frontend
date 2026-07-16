@@ -202,7 +202,16 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
     const parsedPairs = parsePairs(state.pairsText);
     if (parsedPairs.malformed.length) return null;
     if (parsedPairs.pairs.length > MAX_NETWORK_PAIRS) return null;
-    if (parsedPairs.pairs.length) payload.pairs = parsedPairs.pairs;
+    if (parsedPairs.pairs.length) {
+      payload.pairs = parsedPairs.pairs;
+      // With pairs, the graph only ever shows the pair bridges, so scanning the
+      // whole reference computes ~120k interactions to keep ~40. Restrict each
+      // pool to its own pair targets: same graph, hours -> seconds. Only valid
+      // alongside pairs (the backend 400s otherwise), hence set here rather
+      // than unconditionally. A discovery run has nothing to restrict to and
+      // still scans the full reference.
+      payload.restrict_to_pairs = true;
+    }
 
     // Only forward precursor choices for currently-selected miRNAs. Backend
     // treats `pre_ids` as optional and defaults to its own resolution when an
