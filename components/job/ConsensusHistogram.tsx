@@ -51,8 +51,8 @@ export function ConsensusHistogram({ venn }: Props) {
       </div>
 
       <p className="text-xs text-zinc-500">
-        Counts targets predicted by at least <em>k</em> of the {toolCount} tools — a
-        quick read on cross-tool agreement.
+        Targets predicted by at least <em>k</em> of {toolCount} tool
+        {toolCount !== 1 ? "s" : ""}.
       </p>
     </div>
   );
