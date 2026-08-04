@@ -17,6 +17,8 @@ export interface ToolRow {
   status: ToolProgressStatus;
   started_at: number | null;
   finished_at: number | null;
+  elapsed?: number | null;
+  running_since?: number | null;
 }
 
 function toolLabelFor(value: string): string {
@@ -46,6 +48,11 @@ export function mergeToolsStatus(
       status: info.status,
       started_at: info.started_at ?? prev?.started_at ?? null,
       finished_at: info.finished_at ?? prev?.finished_at ?? null,
+      elapsed: info.elapsed ?? prev?.elapsed ?? null,
+      // Unlike the others this must follow the incoming snapshot exactly: the
+      // backend nulls it when a run ends, and falling back to `prev` would
+      // resurrect a finished run and live-count it forever.
+      running_since: info.running_since ?? null,
     };
   }
   return next;
@@ -68,6 +75,8 @@ export function buildToolRows(
         status: entry?.status ?? "pending",
         started_at: entry?.started_at ?? null,
         finished_at: entry?.finished_at ?? null,
+        elapsed: entry?.elapsed ?? null,
+        running_since: entry?.running_since ?? null,
       };
     });
   }
@@ -77,6 +86,8 @@ export function buildToolRows(
     status: entry.status,
     started_at: entry.started_at,
     finished_at: entry.finished_at,
+    elapsed: entry.elapsed ?? null,
+    running_since: entry.running_since ?? null,
   }));
 }
 
@@ -90,29 +101,57 @@ export interface ProgressSummary {
 export function summarize(rows: ToolRow[], backendCurrent?: string): ProgressSummary {
   const completed = rows.filter((row) => row.status === "done").length;
   const running = rows.find((row) => row.status === "running");
+  // A run is finished once no tool is still running and every tool reached a
+  // terminal state (done or failed) -- show "Done" rather than "—".
+  const allTerminal =
+    rows.length > 0 &&
+    rows.every((row) => row.status === "done" || row.status === "failed");
   return {
     total: rows.length,
     completed,
-    current: running?.name ?? backendCurrent ?? (completed === rows.length ? "Done" : "—"),
+    current: running?.name ?? backendCurrent ?? (allTerminal ? "Done" : "—"),
   };
 }
 
-/** Elapsed time for a tool ("time costed"). Live-counts while running. */
-export function formatDuration(
-  startedAt: number | null,
-  finishedAt: number | null,
-  nowMs: number = Date.now(),
-): string {
-  if (startedAt === null) return "—";
-  const end = finishedAt ?? nowMs / 1000;
-  let secs = Math.max(0, Math.round(end - startedAt));
-
-  const h = Math.floor(secs / 3600);
-  secs -= h * 3600;
-  const m = Math.floor(secs / 60);
-  const s = secs - m * 60;
+function formatSecs(secs: number): string {
+  let rest = Math.max(0, Math.round(secs));
+  const h = Math.floor(rest / 3600);
+  rest -= h * 3600;
+  const m = Math.floor(rest / 60);
+  const s = rest - m * 60;
 
   if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
   if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
   return `${s}s`;
+}
+
+/**
+ * Time costed for a tool: the work it actually did, live-counting while running.
+ *
+ * This is `elapsed` (accumulated per run by the runner) and NOT
+ * finished_at - started_at. Each tool runs once per miRNA, and mir-network runs
+ * every tool over two target pools, so the span from a tool's first start to its
+ * last finish also contains every other tool's work: it reported 3h58m for a
+ * miRanda that ran 71s, and the column summed to 21h on a 7h job.
+ *
+ * Jobs predating `elapsed` have no per-run timing to recover, so they fall back
+ * to the old span — still wrong, but it is all those jobs recorded.
+ */
+export function formatDuration(
+  row: Pick<ToolRow, "started_at" | "finished_at" | "elapsed" | "running_since">,
+  nowMs: number = Date.now(),
+): string {
+  const { started_at, finished_at, elapsed, running_since } = row;
+
+  if (elapsed === null || elapsed === undefined) {
+    if (started_at === null) return "—";
+    const end = finished_at ?? nowMs / 1000;
+    return formatSecs(end - started_at);
+  }
+
+  // Banked runs, plus the in-flight one so a running tool still ticks.
+  const inFlight = running_since !== null && running_since !== undefined
+    ? Math.max(0, nowMs / 1000 - running_since)
+    : 0;
+  return formatSecs(elapsed + inFlight);
 }

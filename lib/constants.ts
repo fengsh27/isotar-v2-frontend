@@ -18,12 +18,30 @@ export const WIZARD_STEPS_TARGET = [
   "Review & Run",
 ] as const;
 
+export const WIZARD_STEPS_NETWORK = [
+  "Species",
+  "miRNAs",
+  "ceRNA Pairs",
+  "Prediction Tools",
+  "Configuration",
+  "Review & Run",
+] as const;
+
 // Alias for backwards compatibility
 export const WIZARD_STEPS = WIZARD_STEPS_LNCRNA;
 
 // Matches the backend's ISOTAR_MAX_CORES_PER_JOB env in docker-compose.yml.
 // Keep these two in sync when tuning.
 export const MAX_CORES_PER_JOB = 8;
+
+// UI cap on miRNAs per mir-network job. Stricter than the backend's
+// ISOTAR_MAX_NETWORK_MIRNAS (default 20) — the /api/v1/jobs endpoint still
+// rejects anything above the backend limit, so this only tightens the UI.
+export const MAX_NETWORK_MIRNAS = 5;
+
+// UI cap on pasted (gene, lncRNA) pairs per mir-network job. Submission is
+// blocked above this count to keep the ceRNA graph tractable.
+export const MAX_NETWORK_PAIRS = 100;
 
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
@@ -40,9 +58,26 @@ export const STEP_CONTEXT_TARGET: Record<number, string> = {
   5: "Review your run request, then start an immutable asynchronous job.",
 };
 
+export const STEP_CONTEXT_NETWORK: Record<number, string> = {
+  0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
+  1: "Pick up to 5 miRNAs from the per-species catalog. The job runs every miRNA against both the gene and lncRNA pools.",
+  2: "Optionally paste up to 100 (gene, lncRNA) hypotheses — pairs mode keeps only ceRNA pairs bridged by at least one miRNA. Skip for discovery mode.",
+  3: "Select one or more prediction tools. TargetScan runs on the gene pool only.",
+  4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
+  5: "Review your run request, then start an immutable asynchronous job.",
+};
+
 export const WORKFLOW_LABELS: Record<WorkflowType, string> = {
   "mir-target": "miR-Target Prediction",
   "mir-lncrna": "miR-LncRNA Prediction",
+  "mir-network": "miR-Network Visualization",
+};
+
+/** Compact module names for job summary cards (list + detail). */
+export const WORKFLOW_SHORT_LABELS: Record<WorkflowType, string> = {
+  "mir-target": "miR-Target",
+  "mir-lncrna": "miR-LncRNA",
+  "mir-network": "miR-Network",
 };
 
 export const OPERATION_OPTIONS: {
@@ -132,6 +167,26 @@ export function isToolSupportedForSpecies(
   return true;
 }
 
+/**
+ * Tools that cannot run against a lncRNA target pool: TargetScan ignores the
+ * target FASTA and reads its own precomputed 3' UTR datasets. (PITA is fine --
+ * it scores whatever FASTA is passed to its -utr flag, so the lncRNA reference
+ * is fed there directly.) Mirrors LNCRNA_INCOMPATIBLE_TOOLS in the backend
+ * (app_v1/app.py, v2/mirna_predicting.py), which rejects them at submission.
+ */
+export const LNCRNA_INCOMPATIBLE_TOOLS = new Set<string>(["Targetscan"]);
+
+/** Whether a prediction tool is available for the given workflow. */
+export function isToolSupportedForWorkflow(
+  toolValue: string,
+  workflow: WorkflowType,
+): boolean {
+  if (workflow === "mir-lncrna") {
+    return !LNCRNA_INCOMPATIBLE_TOOLS.has(toolValue);
+  }
+  return true;
+}
+
 export const SPECIES_OPTIONS = [
   { value: "9606",  label: "Homo sapiens",                        subtitle: "Homo sapiens — Human (Taxonomy ID: 9606)",                         genome: null,  file: "hg19 / hg38 (user choice)" },
   { value: "6239",  label: "Caenorhabditis elegans",              subtitle: "Caenorhabditis elegans — Roundworm (Taxonomy ID: 6239)",            genome: "cel", file: "cel_WBcel235_3UTRs.fasta" },
@@ -144,6 +199,26 @@ export const SPECIES_OPTIONS = [
   { value: "9598",  label: "Pan troglodytes",                     subtitle: "Pan troglodytes — Chimpanzee (Taxonomy ID: 9598)",                  genome: "ptr", file: "ptr_Pan_tro3.0_3UTRs.fasta" },
   { value: "10116", label: "Rattus norvegicus",                   subtitle: "Rattus norvegicus — Norway rat (Taxonomy ID: 10116)",               genome: "rno", file: "rno_RGSC6_rn6_3UTRs.fasta" },
 ] as const;
+
+/**
+ * Enrichment (Enrichr) is only offered for species with a supported organism
+ * gene-set library: human, mouse, and rat. The job's `genome` code maps to the
+ * Enrichr organism name; any other species returns `null` and the enrichment
+ * feature is hidden.
+ */
+export function enrichmentOrganismForGenome(genome?: string | null): string | null {
+  switch (genome) {
+    case "hg19":
+    case "hg38":
+      return "Human";
+    case "mmu":
+      return "Mouse";
+    case "rno":
+      return "Rat";
+    default:
+      return null;
+  }
+}
 
 export const OUTPUT_FORMAT_OPTIONS = [
   { value: "standard", label: "Standard" },

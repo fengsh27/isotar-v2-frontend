@@ -1,11 +1,15 @@
 "use client";
 
-import { useRef } from "react";
-import { Accordion, AccordionItem, Alert, Button, Input, Textarea } from "@heroui/react";
+import { useRef, useState } from "react";
+import { Accordion, AccordionItem, Alert, Button, Chip, Input, Textarea } from "@heroui/react";
 
-import { MAX_CORES_PER_JOB } from "@/lib/constants";
+import { validateTargets } from "@/lib/api";
+import { MAX_CORES_PER_JOB, SPECIES_OPTIONS } from "@/lib/constants";
 import { findMalformedTargets, parseTargets } from "@/lib/targets";
+import type { TargetValidationResult } from "@/lib/types";
 import { useWizardStore } from "@/stores/wizardStore";
+
+const MAX_TARGETS = 100;
 
 export function StepConfig() {
   const cores = useWizardStore((state) => state.config.cores);
@@ -17,10 +21,29 @@ export function StepConfig() {
   const targetGeneIds = useWizardStore((state) => state.targetGeneIds);
   const setTargetGeneIds = useWizardStore((state) => state.setTargetGeneIds);
   const workflow = useWizardStore((state) => state.workflow);
+  const species = useWizardStore((state) => state.species);
+  const humanReference = useWizardStore((state) => state.humanReference);
   const next = useWizardStore((state) => state.next);
   const back = useWizardStore((state) => state.back);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [validationResults, setValidationResults] = useState<
+    TargetValidationResult[] | null
+  >(null);
+  const [validationError, setValidationError] = useState("");
+
+  function resetValidation() {
+    setValidationResults(null);
+    setValidationError("");
+  }
+
+  // Clear stale results whenever the target text changes, so what's displayed
+  // always reflects the current input.
+  function handleTargetsChange(value: string) {
+    setTargetGeneIds(value);
+    resetValidation();
+  }
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -29,13 +52,75 @@ export function StepConfig() {
     reader.onload = (ev) => {
       const text = (ev.target?.result as string) ?? "";
       setTargetGeneIds(text.trim());
+      resetValidation();
     };
     reader.readAsText(file);
     e.target.value = "";
   }
 
+  const isLncrnaWorkflow = workflow === "mir-lncrna";
+  const targetType: "gene" | "lncrna" = isLncrnaWorkflow ? "lncrna" : "gene";
+  const supportsTargets = workflow === "mir-target" || isLncrnaWorkflow;
+
+  // Genome for the validation request, derived the same way as StepReview:
+  // human uses the chosen hg19/hg38, other species map to their genome code.
+  const genome =
+    species === "9606"
+      ? humanReference || "hg38"
+      : SPECIES_OPTIONS.find((o) => o.value === species)?.genome ?? "hg38";
+
+  async function checkValidation() {
+    const list = parseTargets(targetGeneIds);
+    if (list.length === 0) return;
+    setIsChecking(true);
+    setValidationError("");
+    try {
+      const res = await validateTargets(list, genome, targetType);
+      setValidationResults(res.results);
+    } catch (err) {
+      setValidationResults(null);
+      setValidationError(
+        err instanceof Error ? err.message : "Validation request failed. Please try again.",
+      );
+    } finally {
+      setIsChecking(false);
+    }
+  }
+
+  const targetCopy = isLncrnaWorkflow
+    ? {
+        sectionTitle: "Select Target (optional)",
+        sectionSubtitle:
+          "Filter by Ensembl transcript ID (e.g. ENST00000761542) or gene ID (e.g. ENSG00000299200)",
+        textareaLabel: "Transcript / Gene IDs",
+        placeholder: "ENST00000761542\nENSG00000299200",
+        description: `One target per line (or comma-separated). Ensembl transcript IDs (e.g. ENST00000761542) or gene IDs (e.g. ENSG00000299200). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
+        malformedTitleSuffix: "look like an Ensembl / FlyBase / WormBase ID",
+        notFoundHint:
+          "Remove or replace not-found targets before continuing. Only Ensembl transcript IDs (e.g. ENST00000761542) and gene IDs (e.g. ENSG00000299200) present in the reference are accepted.",
+      }
+    : {
+        sectionTitle: "Select Target (optional)",
+        sectionSubtitle:
+          "Filter by gene label (e.g. TP53) or RefSeq ID (e.g. NM_000546)",
+        textareaLabel: "Gene Labels / Gene IDs",
+        placeholder: "TP53\nNM_000546\nBRCA1",
+        description: `One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
+        malformedTitleSuffix: "look like a gene symbol or NM_ ID",
+        notFoundHint:
+          "Remove or replace not-found targets before continuing. Only gene symbols (e.g. TP53) and RefSeq IDs (e.g. NM_000546) present in the reference are accepted.",
+      };
+
   const targetCount = parseTargets(targetGeneIds).length;
-  const malformedTargets = findMalformedTargets(targetGeneIds);
+  const malformedTargets = findMalformedTargets(targetGeneIds, targetType);
+  const tooManyTargets = targetCount > MAX_TARGETS;
+  const validCount = validationResults?.filter((r) => r.valid).length ?? 0;
+  const invalidCount = (validationResults?.length ?? 0) - validCount;
+  // Block advancing while any target is known-bad: either it fails the local
+  // shape check, or the backend just told us it isn't in the reference. We
+  // can't know about not-found without a Check Validation click, but any
+  // known invalidity is enough to gate the Next button.
+  const hasInvalidTargets = malformedTargets.length > 0 || invalidCount > 0;
 
   return (
     <section className="space-y-6">
@@ -102,21 +187,21 @@ export function StepConfig() {
         </AccordionItem>
       </Accordion>
 
-      {workflow === "mir-target" && (
+      {supportsTargets && (
         <Accordion variant="splitted">
           <AccordionItem
             key="target"
-            aria-label="Select target genes"
-            title="Select Target (optional)"
-            subtitle="Filter by gene label (e.g. TP53) or RefSeq ID (e.g. NM_000546)"
+            aria-label="Select targets"
+            title={targetCopy.sectionTitle}
+            subtitle={targetCopy.sectionSubtitle}
           >
             <div className="space-y-3 pb-2">
               <Textarea
-                label="Gene Labels / Gene IDs"
-                placeholder={"TP53\nNM_000546\nBRCA1"}
+                label={targetCopy.textareaLabel}
+                placeholder={targetCopy.placeholder}
                 value={targetGeneIds}
-                onValueChange={setTargetGeneIds}
-                description="One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Leave blank to run against all predicted targets."
+                onValueChange={handleTargetsChange}
+                description={targetCopy.description}
                 variant="bordered"
                 classNames={{ inputWrapper: "bg-white" }}
                 minRows={4}
@@ -129,9 +214,24 @@ export function StepConfig() {
                 >
                   Upload file (.txt)
                 </Button>
+                <Button
+                  size="sm"
+                  variant="flat"
+                  color="primary"
+                  isLoading={isChecking}
+                  isDisabled={targetCount === 0 || tooManyTargets}
+                  onPress={checkValidation}
+                >
+                  Check Validation
+                </Button>
                 {targetCount > 0 && (
-                  <span className="text-xs text-zinc-500">
+                  <span
+                    className={`text-xs ${
+                      tooManyTargets ? "font-medium text-red-600" : "text-zinc-500"
+                    }`}
+                  >
                     {targetCount} target{targetCount !== 1 ? "s" : ""} entered
+                    {tooManyTargets ? ` (max ${MAX_TARGETS})` : ""}
                   </span>
                 )}
                 {targetGeneIds.trim() && (
@@ -139,7 +239,7 @@ export function StepConfig() {
                     size="sm"
                     variant="light"
                     color="danger"
-                    onPress={() => setTargetGeneIds("")}
+                    onPress={() => handleTargetsChange("")}
                   >
                     Clear
                   </Button>
@@ -152,20 +252,66 @@ export function StepConfig() {
                 className="hidden"
                 onChange={handleFileUpload}
               />
+              {tooManyTargets && (
+                <Alert
+                  color="danger"
+                  variant="flat"
+                  title={`Too many targets (${targetCount}). The maximum is ${MAX_TARGETS}.`}
+                >
+                  <span className="text-xs">
+                    Remove entries until {MAX_TARGETS} or fewer remain before continuing.
+                  </span>
+                </Alert>
+              )}
+
               {malformedTargets.length > 0 && (
                 <Alert
-                  color="warning"
+                  color="danger"
                   variant="flat"
                   title={`${malformedTargets.length} ${
                     malformedTargets.length === 1 ? "entry doesn't" : "entries don't"
-                  } look like a gene symbol or NM_ ID`}
+                  } ${targetCopy.malformedTitleSuffix}`}
                 >
                   <span className="text-xs">
                     {malformedTargets.slice(0, 5).map((t) => `"${t}"`).join(", ")}
-                    {malformedTargets.length > 5 ? ", …" : ""}. Double-check these — the
-                    job will still run, but unrecognized targets are ignored during filtering.
+                    {malformedTargets.length > 5 ? ", …" : ""}. Fix or remove these
+                    entries before continuing.
                   </span>
                 </Alert>
+              )}
+
+              {validationError && (
+                <Alert color="danger" variant="flat" title={validationError} />
+              )}
+
+              {validationResults && validationResults.length > 0 && (
+                <div className="space-y-2 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip size="sm" variant="flat" color="success">
+                      {validCount} found
+                    </Chip>
+                    {invalidCount > 0 && (
+                      <Chip size="sm" variant="flat" color="danger">
+                        {invalidCount} not found
+                      </Chip>
+                    )}
+                  </div>
+                  <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
+                    {validationResults.map((r, i) => (
+                      <Chip
+                        key={`${r.target}-${i}`}
+                        size="sm"
+                        variant="flat"
+                        color={r.valid ? "success" : "danger"}
+                      >
+                        {r.target}
+                      </Chip>
+                    ))}
+                  </div>
+                  {invalidCount > 0 && (
+                    <p className="text-xs text-zinc-500">{targetCopy.notFoundHint}</p>
+                  )}
+                </div>
               )}
             </div>
           </AccordionItem>
@@ -176,7 +322,11 @@ export function StepConfig() {
         <Button variant="flat" onPress={back}>
           Back: Prediction Tools
         </Button>
-        <Button color="primary" onPress={next}>
+        <Button
+          color="primary"
+          onPress={next}
+          isDisabled={tooManyTargets || hasInvalidTargets}
+        >
           Next: Review &amp; Run
         </Button>
       </div>

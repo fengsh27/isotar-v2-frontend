@@ -35,6 +35,9 @@ export default function RootLayout({
                   <Link href="/run?workflow=mir-lncrna&new=1" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     miR-LncRNA Prediction
                   </Link>
+                  <Link href="/network" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                    miR-Network Visualization
+                  </Link>
                   <Link href="/jobs" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     Jobs
                   </Link>

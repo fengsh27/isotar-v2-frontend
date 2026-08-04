@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# isotar-v2-frontend
 
-## Getting Started
+Web frontend for **isotar**, a bioinformatics tool for miRNA-centered target
+prediction and downstream enrichment analysis. Built with Next.js (App Router),
+HeroUI, Tailwind CSS, and Zustand.
 
-First, run the development server:
+The UI drives the isotar backend job API: users compose a job through a
+wizard, submit it, and monitor the async run to completion. Every job produces
+an immutable manifest that fully captures its provenance.
+
+## Workflows
+
+Three analysis workflows are selectable at wizard start:
+
+| Workflow | Key ID | What it does |
+|---|---|---|
+| miR-Target Prediction | `mir-target` | Single-miRNA target prediction against the gene (3′ UTR) pool. Optional **Select Target** filter for specific gene labels / RefSeq IDs. |
+| miR-LncRNA Prediction | `mir-lncrna` | Single-miRNA target prediction against the lncRNA pool. Same **Select Target** filter, extended to Ensembl / FlyBase / WormBase IDs. |
+| miR-Network Visualization | `mir-network` | Multi-miRNA prediction (up to 20) against both gene and lncRNA pools, rendered as a tripartite Cytoscape network. Supports per-miRNA **variants** (shift and/or modification) so a job can compare WT against one or more variants of the same miRNA in a single run. |
+
+The single-miRNA workflows share a 6-step sequence
+(`Species → miRNA → Operation → Tools → Configuration → Review`); `mir-network`
+replaces the Operation step with a `ceRNA Pairs` step and hosts the variant
+editor inline with miRNA selection.
+
+## Getting started
 
 ```bash
-npm run dev
-# or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# or npm run dev / pnpm dev / bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The dev server hits whatever backend `NEXT_PUBLIC_API_BASE_URL` (see
+`.env.local`) points at; without it, the UI still renders but job submissions
+fail.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project structure
 
-## Learn More
+```
+app/
+  run/             analysis wizard (workflow selected via ?workflow=)
+  jobs/            job list
+  jobs/[id]/       job status & results (including the network graph)
+components/
+  wizard/          shared single-miRNA wizard steps
+  wizard-network/  mir-network wizard steps (including NetworkVariantsSection)
+  job/             job-detail views (NetworkGraph, tables, …)
+stores/
+  wizardStore.ts        single-miRNA wizard state (mir-target, mir-lncrna)
+  networkWizardStore.ts mir-network wizard state (incl. per-miRNA variants)
+lib/                    shared domain helpers, API client, types
+```
 
-To learn more about Next.js, take a look at the following resources:
+See [`CLAUDE.md`](./CLAUDE.md) for the canonical model of the codebase
+(workflows, job manifest, source-of-truth hierarchy, UX rules) that AI
+assistants must follow when editing this repo.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Learn more
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [HeroUI](https://heroui.com/)
+- [Cytoscape.js](https://js.cytoscape.org/) — powers the network graph

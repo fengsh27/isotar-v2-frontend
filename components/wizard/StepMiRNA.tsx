@@ -76,6 +76,13 @@ function toFasta(id: string, record: MirnaRecord): string {
 }
 
 const RNA_SEQ_RE = /^[ACGUacguTt\s]+$/;
+const MIN_CUSTOM_SEQ_LENGTH = 17;
+const MAX_CUSTOM_SEQ_LENGTH = 30;
+
+// miRNA-like label: starts with alphanumeric, then up to 49 chars of
+// alphanumeric / dot / underscore / hyphen. No whitespace or special chars
+// that would break filenames or job IDs downstream.
+const CUSTOM_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$/;
 
 function normalizeSeq(seq: string) {
   return seq.replace(/\s/g, "").toUpperCase();
@@ -87,6 +94,8 @@ export function StepMiRNA() {
   const setMirnaId = useWizardStore((state) => state.setMirnaId);
   const customMirnaSeq = useWizardStore((state) => state.customMirnaSeq);
   const setCustomMirnaSeq = useWizardStore((state) => state.setCustomMirnaSeq);
+  const customMirnaName = useWizardStore((state) => state.customMirnaName);
+  const setCustomMirnaName = useWizardStore((state) => state.setCustomMirnaName);
   const useCustomMirnaSeq = useWizardStore((state) => state.useCustomMirnaSeq);
   const setUseCustomMirnaSeq = useWizardStore((state) => state.setUseCustomMirnaSeq);
   const setPreId = useWizardStore((state) => state.setPreId);
@@ -199,10 +208,23 @@ export function StepMiRNA() {
   const hasExtPreSeq = Boolean(selectedRecord?.ext_pre_seq?.trim());
 
   const normalizedCustomSeq = normalizeSeq(customMirnaSeq);
-  const customSeqValid = normalizedCustomSeq.length > 0 && RNA_SEQ_RE.test(customMirnaSeq);
   const customSeqHasInvalidChars = customMirnaSeq.trim().length > 0 && !RNA_SEQ_RE.test(customMirnaSeq);
+  const customSeqTooShort =
+    normalizedCustomSeq.length > 0 && normalizedCustomSeq.length < MIN_CUSTOM_SEQ_LENGTH;
+  const customSeqTooLong = normalizedCustomSeq.length > MAX_CUSTOM_SEQ_LENGTH;
+  const customSeqValid =
+    !customSeqHasInvalidChars &&
+    normalizedCustomSeq.length >= MIN_CUSTOM_SEQ_LENGTH &&
+    normalizedCustomSeq.length <= MAX_CUSTOM_SEQ_LENGTH;
 
-  const canProceed = useCustomMirnaSeq ? customSeqValid : Boolean(selectedId && selectedRecord);
+  const trimmedCustomName = customMirnaName.trim();
+  const customNameHasInvalidChars =
+    trimmedCustomName.length > 0 && !CUSTOM_NAME_RE.test(trimmedCustomName);
+  const customNameValid = trimmedCustomName.length > 0 && CUSTOM_NAME_RE.test(trimmedCustomName);
+
+  const canProceed = useCustomMirnaSeq
+    ? customSeqValid && customNameValid
+    : Boolean(selectedId && selectedRecord);
   const copyButtonClass =
     copyState === "done"
       ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
@@ -219,6 +241,7 @@ export function StepMiRNA() {
       setSelectedId("");
     } else {
       setCustomMirnaSeq("");
+      setCustomMirnaName("");
     }
   }
 
@@ -293,6 +316,30 @@ export function StepMiRNA() {
       {useCustomMirnaSeq ? (
         <div className="space-y-3">
           <div className="rounded-xl border border-zinc-300 bg-zinc-100 px-3 py-2 transition-colors focus-within:border-zinc-400 focus-within:bg-white">
+            <label htmlFor="custom-mirna-name" className="text-sm text-zinc-500">
+              miRNA name
+            </label>
+            <input
+              id="custom-mirna-name"
+              type="text"
+              placeholder="e.g. my-mir-X1"
+              value={customMirnaName}
+              onChange={(e) => setCustomMirnaName(e.target.value)}
+              className="w-full border-0 bg-transparent p-0 font-mono text-base text-zinc-700 placeholder:text-zinc-400 focus:outline-none"
+            />
+          </div>
+          {customNameHasInvalidChars ? (
+            <p className="text-xs text-red-600">
+              Name must start with a letter or digit and use only letters, digits,
+              dot, underscore, or hyphen (max 50 chars). No whitespace.
+            </p>
+          ) : trimmedCustomName.length === 0 ? (
+            <p className="text-xs text-zinc-500">
+              Required. Used as the miRNA identifier in the job manifest and result files.
+            </p>
+          ) : null}
+
+          <div className="rounded-xl border border-zinc-300 bg-zinc-100 px-3 py-2 transition-colors focus-within:border-zinc-400 focus-within:bg-white">
             <label htmlFor="custom-mirna-seq" className="text-sm text-zinc-500">
               miRNA sequence
             </label>
@@ -309,14 +356,24 @@ export function StepMiRNA() {
             <p className="text-xs text-red-600">
               Sequence contains invalid characters. Use A, C, G, U (RNA) or T (DNA) only.
             </p>
+          ) : customSeqTooShort ? (
+            <p className="text-xs text-red-600">
+              Sequence is too short ({normalizedCustomSeq.length} nt). Minimum is{" "}
+              {MIN_CUSTOM_SEQ_LENGTH} nt.
+            </p>
+          ) : customSeqTooLong ? (
+            <p className="text-xs text-red-600">
+              Sequence is too long ({normalizedCustomSeq.length} nt). Maximum is{" "}
+              {MAX_CUSTOM_SEQ_LENGTH} nt.
+            </p>
           ) : normalizedCustomSeq.length > 0 ? (
             <p className="text-xs text-zinc-500">
               {normalizedCustomSeq.length} nt · Operation step will be skipped for custom sequences.
             </p>
           ) : (
             <p className="text-xs text-zinc-500">
-              RNA or DNA sequence. Spaces and line breaks are ignored.
-              Operation step will be skipped.
+              RNA or DNA sequence ({MIN_CUSTOM_SEQ_LENGTH}–{MAX_CUSTOM_SEQ_LENGTH} nt).
+              Spaces and line breaks are ignored. Operation step will be skipped.
             </p>
           )}
         </div>

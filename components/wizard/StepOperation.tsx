@@ -10,17 +10,10 @@ import {
 } from "@/lib/operation";
 import { useWizardStore } from "@/stores/wizardStore";
 import { loadMirnaDataset, resolvePrecursor, type MirnaRecord } from "@/lib/mirnaData";
+import { PrecursorPreview } from "@/components/wizard/SequencePreview";
 
-function buildCaretLine(length: number, start: number, end: number): string {
-  const safeStart = Math.min(Math.max(1, start), length);
-  const safeEnd = Math.min(Math.max(1, end), length);
-
-  if (safeStart >= safeEnd) {
-    return `${" ".repeat(safeStart - 1)}^`;
-  }
-
-  return `${" ".repeat(safeStart - 1)}^${" ".repeat(safeEnd - safeStart - 1)}^`;
-}
+const MIN_MATURE_LENGTH = 17;
+const MAX_MATURE_LENGTH = 30;
 
 function parseShiftPreviewValue(value: string): number {
   const trimmed = value.trim();
@@ -136,57 +129,6 @@ export function StepOperation() {
     return { hasInvalidBoundary: end < start, start, end };
   }, [selectedRecord, shiftBaseEnd, shiftBaseStart, shiftLeft, shiftRight]);
 
-  const shiftPreview = useMemo(() => {
-    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
-      return null;
-    }
-
-    const left = parseShiftPreviewValue(shiftLeft);
-    const right = parseShiftPreviewValue(shiftRight);
-    const rawStart = shiftBaseStart + left;
-    const rawEnd = shiftBaseEnd + right;
-    const length = shiftReferenceSequence.length;
-    const clampedStart = Math.min(Math.max(1, rawStart), length);
-    const clampedEnd = Math.min(Math.max(1, rawEnd), length);
-
-    return buildCaretLine(
-      length,
-      clampedStart,
-      clampedEnd,
-    );
-  }, [selectedRecord, shiftBaseEnd, shiftBaseStart, shiftLeft, shiftReferenceSequence, shiftRight]);
-
-  const precursorDisplay = useMemo(() => {
-    if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
-      return null;
-    }
-
-    const left = parseShiftPreviewValue(shiftLeft);
-    const right = parseShiftPreviewValue(shiftRight);
-    const rawStart = shiftBaseStart + left;
-    const rawEnd = shiftBaseEnd + right;
-    const length = shiftReferenceSequence.length;
-    const clampedStart = Math.min(Math.max(1, rawStart), length);
-    const clampedEnd = Math.min(Math.max(1, rawEnd), length);
-
-    const highlightStart = Math.min(clampedStart, clampedEnd);
-    const highlightEnd = clampedStart >= clampedEnd ? clampedStart : clampedEnd;
-
-    return {
-      prefix: shiftReferenceSequence.slice(0, highlightStart - 1),
-      mature: shiftReferenceSequence.slice(highlightStart - 1, highlightEnd),
-      suffix: shiftReferenceSequence.slice(highlightEnd),
-      caretLine: buildCaretLine(length, clampedStart, clampedEnd),
-    };
-  }, [
-    selectedRecord,
-    shiftBaseEnd,
-    shiftBaseStart,
-    shiftLeft,
-    shiftReferenceSequence,
-    shiftRight,
-  ]);
-
   const shiftedMatureSequence = useMemo(() => {
     if (!selectedRecord || shiftBaseStart === undefined || shiftBaseEnd === undefined) {
       return null;
@@ -218,13 +160,17 @@ export function StepOperation() {
     shiftRight,
   ]);
 
-  const shiftLengthTooShort = useMemo(() => {
-    const hasShiftInput = shiftLeft.trim() !== "" || shiftRight.trim() !== "";
-    if (!hasShiftInput || !shiftedMatureSequence) return false;
-    return shiftedMatureSequence.sequence.length < 17;
-  }, [shiftLeft, shiftRight, shiftedMatureSequence]);
-
   const modificationReferenceSeq = shiftedMatureSequence?.sequence ?? selectedRecord?.mature_seq ?? "";
+
+  const matureLengthState = useMemo(() => {
+    if (!modificationReferenceSeq) {
+      return { invalid: false, tooShort: false, tooLong: false, length: 0 };
+    }
+    const length = modificationReferenceSeq.length;
+    const tooShort = length < MIN_MATURE_LENGTH;
+    const tooLong = length > MAX_MATURE_LENGTH;
+    return { invalid: tooShort || tooLong, tooShort, tooLong, length };
+  }, [modificationReferenceSeq]);
 
   useEffect(() => {
     if (!modifications.length) {
@@ -268,22 +214,11 @@ export function StepOperation() {
             </p>
           </div>
 
-          {selectedRecord ? (
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3">
-              <p className="text-sm font-semibold text-zinc-900">
-                Extended precursor sequence reference
-              </p>
-              <pre className="mt-2 overflow-x-auto rounded bg-white p-2 text-xs text-zinc-800">
-                {precursorDisplay?.prefix}
-                <span className="rounded bg-emerald-100/80 px-0.5 font-extrabold text-emerald-900">
-                  {precursorDisplay?.mature}
-                </span>
-                {precursorDisplay?.suffix}
-                {"\n"}
-                {precursorDisplay?.caretLine ?? shiftPreview}
-              </pre>
-            </div>
-          ) : null}
+          <PrecursorPreview
+            record={selectedRecord}
+            shiftLeft={shiftLeft}
+            shiftRight={shiftRight}
+          />
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -332,11 +267,15 @@ export function StepOperation() {
             />
           ) : null}
 
-          {shiftLengthTooShort ? (
+          {matureLengthState.invalid ? (
             <Alert
               color="danger"
-              title="Shifted sequence is too short."
-              description={`The resulting mature sequence has ${shiftedMatureSequence?.sequence.length ?? 0} nt. Minimum required is 17 nt.`}
+              title={
+                matureLengthState.tooShort
+                  ? "Shifted sequence is too short."
+                  : "Shifted sequence is too long."
+              }
+              description={`The resulting mature sequence has ${matureLengthState.length} nt. Allowed length is ${MIN_MATURE_LENGTH}–${MAX_MATURE_LENGTH} nt.`}
               variant="flat"
             />
           ) : null}
@@ -456,6 +395,19 @@ export function StepOperation() {
             />
           ) : null}
 
+          {matureLengthState.invalid ? (
+            <Alert
+              color="danger"
+              title={
+                matureLengthState.tooShort
+                  ? "Mature sequence is too short to modify."
+                  : "Mature sequence is too long to modify."
+              }
+              description={`The mature sequence has ${matureLengthState.length} nt. Allowed length is ${MIN_MATURE_LENGTH}–${MAX_MATURE_LENGTH} nt. Go back to Shift and adjust the boundaries.`}
+              variant="flat"
+            />
+          ) : null}
+
           {shiftBoundaryValidation.hasInvalidBoundary ? (
             <p className="text-sm font-medium text-red-600">
               Shift boundary is invalid: left index must be less than or equal to right index.
@@ -474,7 +426,7 @@ export function StepOperation() {
             <Button
               color="primary"
               onPress={() => setOperationSubstep("modification")}
-              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary || shiftLengthTooShort}
+              isDisabled={operationState.hasInvalidShift || shiftBoundaryValidation.hasInvalidBoundary || matureLengthState.invalid}
             >
               Next: Modification
             </Button>
@@ -487,7 +439,7 @@ export function StepOperation() {
             <Button
               color="primary"
               onPress={next}
-              isDisabled={!operationState.isValid || shiftBoundaryValidation.hasInvalidBoundary}
+              isDisabled={!operationState.isValid || shiftBoundaryValidation.hasInvalidBoundary || matureLengthState.invalid}
             >
               Next: Prediction Tools
             </Button>

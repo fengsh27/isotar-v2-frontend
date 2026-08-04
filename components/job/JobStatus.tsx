@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { getJob, killJob } from "@/lib/api";
 import { untrackJobId } from "@/lib/jobStorage";
-import { JOB_STAGE_SEQUENCE, STATUS_COLOR } from "@/lib/constants";
+import { JOB_STAGE_SEQUENCE, STATUS_COLOR, WORKFLOW_SHORT_LABELS } from "@/lib/constants";
 import type { JobRecord } from "@/lib/types";
 import {
   buildToolRows,
@@ -131,7 +131,14 @@ export function JobStatus({ jobId }: { jobId: string }) {
       <div className="surface-panel-strong rounded-2xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-zinc-900">Job {jobId}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold text-zinc-900">Job {jobId}</h1>
+              {job?.workflow ? (
+                <Chip size="sm" variant="flat" color="secondary">
+                  {WORKFLOW_SHORT_LABELS[job.workflow]}
+                </Chip>
+              ) : null}
+            </div>
             <p className="mt-1 text-sm text-zinc-600">
               Status: <span className="font-medium text-zinc-800">{statusTitle}</span>
             </p>
@@ -188,7 +195,10 @@ export function JobStatus({ jobId }: { jobId: string }) {
         {job ? (
           <div className="mt-4 grid gap-2 text-sm text-zinc-600 md:grid-cols-3">
             <p>
-              <strong>miRNA:</strong> {job.mirna_id ?? "—"}
+              <strong>miRNA{job.mirna_ids && job.mirna_ids.length > 1 ? "s" : ""}:</strong>{" "}
+              {job.mirna_ids && job.mirna_ids.length
+                ? `${job.mirna_ids.length} selected`
+                : job.mirna_id ?? "—"}
               {job.pre_id ? ` (${job.pre_id})` : ""}
             </p>
             <p>
@@ -267,7 +277,7 @@ export function JobStatus({ jobId }: { jobId: string }) {
       ) : null}
 
       {job?.status === "succeeded" ? (
-        <JobResults jobId={jobId} mirnaId={job.mirna_id} />
+        <JobResults jobId={jobId} mirnaId={job.mirna_id} genome={job.genome} workflow={job.workflow} />
       ) : (
         <div className="surface-panel rounded-xl p-4 text-sm text-zinc-600">
           {isFinished

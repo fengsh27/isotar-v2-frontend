@@ -4,18 +4,22 @@
 
 ### Workflows
 
-Two analysis workflows are supported, selected at wizard start:
+Three analysis workflows are supported, selected at wizard start:
 
 | Workflow | Key ID | Steps |
 |---|---|---|
 | miR-Target Prediction | `mir-target` | Species → miRNA → Operation → Tools → Configuration → Review |
 | miR-LncRNA Prediction | `mir-lncrna` | Species → miRNA → Operation → Tools → Configuration → Review |
+| miR-Network Visualization | `mir-network` | Species → miRNAs → ceRNA Pairs → Tools → Configuration → Review |
 
-The `mir-target` workflow adds an optional **Select Target** card inside the Configuration step (gene label / RefSeq ID filtering). Both workflows share the same 6-step sequence.
+Workflow-specific details:
+
+- **`mir-target` / `mir-lncrna`** share a 6-step single-miRNA sequence. The Configuration step exposes an optional **Select Target** card for filtering predictions to specific gene labels / RefSeq IDs (`mir-target`) or Ensembl / FlyBase / WormBase IDs (`mir-lncrna`).
+- **`mir-network`** runs up to `MAX_NETWORK_MIRNAS` miRNAs (currently 20) against both the gene and lncRNA target pools and renders the result as a tripartite Cytoscape graph. Its **Select miRNAs** step also hosts a per-miRNA **Variants** editor: users add any number of variants (shift and/or per-position modifications) per selected miRNA to compare the WT prediction against its variants in a single job. The `mir-network` wizard has no dedicated Operation step — variant operations live inline with miRNA selection.
 
 ### Core workflow
 ```
-species → miRNA → operation → prediction tools → configuration → job → results
+species → miRNA(s) → [operation | pairs + variants] → prediction tools → configuration → job → results
 ```
 
 ### Key characteristics
@@ -64,7 +68,7 @@ LLM agents MUST respect the following hierarchy:
 ## 4. Core Domain Concepts (Do NOT redefine)
 
 ### 4.1 miRNA
-- Single miRNA per job (v1)
+- Single miRNA per job for `mir-target` / `mir-lncrna`; up to `MAX_NETWORK_MIRNAS` per job for `mir-network`
 - Example: `hsa-miR-495-3p`
 - Validated against authoritative sources (e.g., miRBase)
 - Species-specific interpretation
@@ -78,7 +82,8 @@ Allowed values:
 
 Operations are:
 - Optional
-- Chosen **before** tools
+- Chosen **before** tools (single-miRNA workflows)
+- In `mir-network`, operations attach to **variants**, not the miRNA itself. Each selected miRNA may carry any number of variant specs (`{shift?, modifications?}`); the WT prediction is always included implicitly. A single job can compare WT against multiple variants of the same miRNA.
 
 ---
 
@@ -142,18 +147,36 @@ LLM agents must **never fabricate** manifest fields.
 
 ### Job payload fields (`POST /api/v1/jobs`)
 
+Shared fields:
+
+| Field | Type | When included |
+|---|---|---|
+| `workflow` | string | always |
+| `tools` | string[] | always |
+| `genome` | string | when species has a fixed genome code (or human ref chosen) |
+| `cores` | number | always |
+
+Single-miRNA workflows (`mir-target`, `mir-lncrna`):
+
 | Field | Type | When included |
 |---|---|---|
 | `mirna_id` | string | validated miRNA ID (not custom seq) |
 | `mirna_seq` | string | custom sequence mode |
-| `tools` | string[] | always |
-| `workflow` | string | always |
-| `genome` | string | when species has a fixed genome code |
-| `cores` | number | always |
 | `modifications` | string[] | when modification operation is set |
 | `shift` | string | when shift operation is set |
-| `pre_id` | string | when precursor ID is set |
-| `targets` | string[] | `mir-target` only, when target genes are specified |
+| `pre_id` | string | when a specific precursor is chosen |
+| `targets` | string[] | when target IDs are specified (both `mir-target` and `mir-lncrna`) |
+
+Network workflow (`mir-network`):
+
+| Field | Type | When included |
+|---|---|---|
+| `mirna_ids` | string[] | always (1..`MAX_NETWORK_MIRNAS`) |
+| `pre_ids` | Record<mirnaId, preId> | when any selected miRNA has an explicit precursor choice |
+| `pairs` | `{gene, lncrna, score}[]` | when ceRNA pairs mode is used (else discovery mode); `score` is required per pair (finite number, not bool) and is forwarded verbatim to the backend — the frontend does not consume it yet |
+| `variants` | Record<mirnaId, NetworkVariantSpec[]> | when ≥1 selected miRNA has ≥1 non-empty variant editor |
+
+Where `NetworkVariantSpec = { shift?: string; modifications?: string[] }` — a variant with neither field is silently dropped; a variant with typed-but-invalid content blocks submission.
 
 ---
 
@@ -170,18 +193,29 @@ app/
 
 ### Wizard state
 
-* Stored in **Zustand** (`stores/wizardStore.ts`)
-* Not persisted beyond job creation (page refresh resets wizard progress)
+Wizard state is held in **Zustand**, split by workflow family. Both stores are ephemeral — state is not persisted beyond job creation (page refresh resets wizard progress).
+
+**`stores/wizardStore.ts`** — single-miRNA workflows (`mir-target`, `mir-lncrna`).
+
 * `workflow` is synced from the URL param `?workflow=` on every mount — do not rely on Zustand alone for workflow identity
 * Canonical fields:
-
   * `workflow` — `"mir-target"` | `"mir-lncrna"`
   * `mirnaId`
   * `operation`
   * `tools`
   * `species`
   * `config`
-  * `targetGeneIds` — free-text string; newline- or comma-separated gene labels (e.g. `TP53`) or RefSeq IDs (e.g. `NM_000546`); `mir-target` only
+  * `targetGeneIds` — free-text string; newline- or comma-separated gene labels (e.g. `TP53`) or RefSeq IDs (e.g. `NM_000546`) for `mir-target`, or Ensembl / FlyBase / WormBase IDs for `mir-lncrna`
+
+**`stores/networkWizardStore.ts`** — `mir-network` workflow.
+
+* Canonical fields:
+  * `species`, `humanReference`
+  * `selectedMirnas: string[]`
+  * `preIds: Record<mirnaId, preId>` — only populated for miRNAs mapping to >1 precursor
+  * `variants: Record<mirnaId, NetworkVariantEditor[]>` — sparse; WT is implicit and never appears here. Each editor holds `{ key, shiftLeft, shiftRight, rows }`; `toJobPayload` serializes it to the backend's `NetworkVariantSpec[]` via `evaluateOperationState` (the shared validator used by the single-miRNA Operation step).
+  * `pairsText`, `tools`, `cores`
+* Deselecting a miRNA prunes both its `preIds` entry and its `variants` entry, so submission never carries orphan data.
 
 ⚠️ LLMs must not introduce parallel state systems.
 

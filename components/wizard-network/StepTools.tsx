@@ -5,27 +5,23 @@ import { Button } from "@heroui/react";
 
 import {
   SPECIES_OPTIONS,
+  TARGETSCAN_TOOL,
   TOOL_OPTIONS,
   isToolSupportedForSpecies,
-  isToolSupportedForWorkflow,
 } from "@/lib/constants";
-import { useWizardStore } from "@/stores/wizardStore";
+import { useNetworkWizardStore } from "@/stores/networkWizardStore";
 
 export function StepTools() {
-  const species = useWizardStore((state) => state.species);
-  const workflow = useWizardStore((state) => state.workflow);
-  const tools = useWizardStore((state) => state.tools);
-  const toggleTool = useWizardStore((state) => state.toggleTool);
-  const setTools = useWizardStore((state) => state.setTools);
-  const next = useWizardStore((state) => state.next);
-  const back = useWizardStore((state) => state.back);
+  const species = useNetworkWizardStore((state) => state.species);
+  const tools = useNetworkWizardStore((state) => state.tools);
+  const toggleTool = useNetworkWizardStore((state) => state.toggleTool);
+  const setTools = useNetworkWizardStore((state) => state.setTools);
+  const next = useNetworkWizardStore((state) => state.next);
+  const back = useNetworkWizardStore((state) => state.back);
 
-  // A tool is available when it is supported for BOTH the selected species
-  // (TargetScan is species-restricted) and the workflow (TargetScan cannot
-  // run against lncRNA targets).
-  const isAvailable = (toolValue: string) =>
-    isToolSupportedForSpecies(toolValue, species) &&
-    isToolSupportedForWorkflow(toolValue, workflow);
+  // Network workflow allows TargetScan (the backend auto-skips it on the lncRNA pool),
+  // so only species gating applies here — no workflow gating.
+  const isAvailable = (toolValue: string) => isToolSupportedForSpecies(toolValue, species);
 
   const supportedToolValues = TOOL_OPTIONS.filter((tool) =>
     isAvailable(tool.value),
@@ -34,36 +30,25 @@ export function StepTools() {
     supportedToolValues.length > 0 &&
     supportedToolValues.every((tool) => tools.includes(tool));
 
-  const speciesLabel =
+  const speciesLabelText =
     SPECIES_OPTIONS.find((option) => option.value === species)?.label ?? "this species";
 
-  // Tools gated specifically by the lncRNA workflow (TargetScan). Surfaced
-  // as one muted note below the table rather than a pill on every row.
-  const lncrnaGatedLabels = TOOL_OPTIONS.filter(
-    (tool) =>
-      !isToolSupportedForWorkflow(tool.value, workflow) &&
-      isToolSupportedForSpecies(tool.value, species),
-  ).map((tool) => tool.label);
-
-  // Drop any selected tool that is not available for the current species or
-  // workflow (e.g. switching species/workflow where a tool has no support).
+  // Drop selected tools that are not available for the current species
+  // (e.g. after switching species).
   useEffect(() => {
-    const filtered = tools.filter(
-      (tool) =>
-        isToolSupportedForSpecies(tool, species) &&
-        isToolSupportedForWorkflow(tool, workflow),
-    );
+    const filtered = tools.filter((tool) => isToolSupportedForSpecies(tool, species));
     if (filtered.length !== tools.length) {
       setTools(filtered);
     }
-  }, [species, workflow, tools, setTools]);
+  }, [species, tools, setTools]);
 
   return (
     <section className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-zinc-900">Select Prediction Tools</h2>
         <p className="mt-1 text-sm text-zinc-600">
-          Select target prediction algorithms to use. Choose at least one tool before proceeding.
+          Choose at least one tool. TargetScan runs on the gene pool only — it&apos;s automatically
+          skipped for lncRNA targets.
         </p>
       </div>
 
@@ -90,15 +75,12 @@ export function StepTools() {
             </thead>
             <tbody>
               {TOOL_OPTIONS.map((tool) => {
-                const supportedForWorkflow = isToolSupportedForWorkflow(tool.value, workflow);
-                const supportedForSpecies = isToolSupportedForSpecies(tool.value, species);
-                const supported = supportedForSpecies && supportedForWorkflow;
-                const unavailableReason = !supportedForWorkflow
-                  ? "Not available for lncRNA targets"
-                  : !supportedForSpecies
-                    ? `Not available for ${speciesLabel}`
-                    : null;
+                const supported = isToolSupportedForSpecies(tool.value, species);
+                const unavailableReason = !supported
+                  ? `Not available for ${speciesLabelText}`
+                  : null;
                 const checked = supported && tools.includes(tool.value);
+                const isTargetscan = tool.value === TARGETSCAN_TOOL;
 
                 return (
                   <tr
@@ -122,6 +104,11 @@ export function StepTools() {
                     </td>
                     <td className={`px-4 py-3 text-sm ${supported ? "text-zinc-600" : "text-zinc-400"}`}>
                       {tool.description}
+                      {isTargetscan ? (
+                        <span className="ml-1 text-xs italic text-zinc-500">
+                          (gene targets only)
+                        </span>
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -130,18 +117,6 @@ export function StepTools() {
           </table>
         </div>
 
-        {lncrnaGatedLabels.length ? (
-          <p className="mt-3 flex items-start gap-1.5 text-[13px] text-zinc-500">
-            <span aria-hidden className="mt-px text-zinc-400">
-              &#9432;
-            </span>
-            <span>
-              {lncrnaGatedLabels.join(" & ")} don&apos;t support lncRNA targets and are
-              disabled for this workflow.
-            </span>
-          </p>
-        ) : null}
-
         <p className={`mt-4 text-sm ${tools.length ? "text-zinc-700" : "font-medium text-red-600"}`}>
           The user must select <strong>at least one</strong> prediction tool before proceeding.
         </p>
@@ -149,7 +124,7 @@ export function StepTools() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>
-          Back: Operation
+          Back: ceRNA Pairs
         </Button>
         <Button color="primary" onPress={next} isDisabled={!tools.length}>
           Next: Configuration

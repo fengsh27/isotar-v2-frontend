@@ -12,11 +12,12 @@ function formatUnix(ts: number | null): string {
 
 const TOOL_STATUS_COLOR: Record<
   ToolProgressStatus,
-  "default" | "primary" | "success"
+  "default" | "primary" | "success" | "danger"
 > = {
   pending: "default",
   running: "primary",
   done: "success",
+  failed: "danger",
 };
 
 interface Props {
@@ -76,7 +77,7 @@ export function JobProgress({ rows, summary }: Props) {
               <td className="py-1.5 pr-4 text-zinc-600">{formatUnix(row.started_at)}</td>
               <td className="py-1.5 pr-4 text-zinc-600">{formatUnix(row.finished_at)}</td>
               <td className="py-1.5 tabular-nums text-zinc-700">
-                {formatDuration(row.started_at, row.finished_at)}
+                {formatDuration(row)}
               </td>
             </tr>
           ))}

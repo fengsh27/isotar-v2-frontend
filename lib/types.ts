@@ -1,6 +1,6 @@
 export type OperationType = "shift" | "modification";
 
-export type WorkflowType = "mir-target" | "mir-lncrna";
+export type WorkflowType = "mir-target" | "mir-lncrna" | "mir-network";
 
 export type JobStatusValue =
   | "queued"
@@ -29,6 +29,103 @@ export interface CreateJobPayload {
   targets?: string[];
 }
 
+/** One hypothesized ceRNA (gene, lncRNA, score) triple supplied for a network
+ *  job. `score` is a caller-provided ranking / correlation for the pair — the
+ *  backend requires it (a finite number, not bool) and carries it through
+ *  untouched for downstream use, though the frontend does not consume it yet. */
+export interface NetworkPairInput {
+  gene: string;
+  lncrna: string;
+  score: number;
+}
+
+/** One operation spec applied to a miRNA to produce a variant graph node.
+ *  At least one of `shift` / `modifications` must be present (backend rejects
+ *  a spec with neither). Both may be present, in which case the shift and
+ *  modifications combine into a single variant. */
+export interface NetworkVariantSpec {
+  /** `"left|right"`, both integers (may be negative). Example: `"-7|1"`. */
+  shift?: string;
+  /** `"pos:from|to"` strings; 1-based position, nucleotides A/C/G/T/U. */
+  modifications?: string[];
+}
+
+/** Payload for the mir-network workflow: a list of miRNAs run against both the
+ *  gene and lncRNA pools, with optional ceRNA pairs. */
+export interface CreateNetworkJobPayload {
+  workflow: "mir-network";
+  mirna_ids: string[];
+  /** Optional per-miRNA precursor disambiguation: `{ "<mirna_id>": "<pre_id>" }`.
+   *  Only multi-precursor miRNAs need an entry; omitted miRNAs use backend
+   *  default resolution. */
+  pre_ids?: Record<string, string>;
+  /** Optional per-miRNA variant specs. Each spec becomes one variant graph
+   *  node alongside the (always-emitted) WT node for that miRNA. */
+  variants?: Record<string, NetworkVariantSpec[]>;
+  tools: string[];
+  genome?: string;
+  cores?: number;
+  pairs?: NetworkPairInput[];
+  /** Scan only the pairs' own gene/lncRNA targets instead of the whole
+   *  reference. Sent whenever `pairs` is present — a pairs run only ever
+   *  displays the pair bridges, so scanning the full genome to discard >99.9%
+   *  of it just costs hours. Requires `pairs`; the backend rejects it without.
+   *  Trade-off: /result and the result zip then carry only the pair targets,
+   *  not the genome-wide table. */
+  restrict_to_pairs?: boolean;
+}
+
+export type NetworkNodeType = "gene" | "mirna" | "lncrna";
+
+export interface NetworkNode {
+  id: string;
+  type: NetworkNodeType;
+  label: string;
+  name?: string | null;
+  /** miRNA nodes only: the parent miRNA id shared by a miRNA's WT and all
+   *  its variant nodes. For non-variant nodes, `base === id`. Absent on
+   *  gene/lncrna nodes. */
+  base?: string;
+}
+
+export interface NetworkEdge {
+  /** gene_id or mirna_id depending on `side`. */
+  source: string;
+  /** mirna_id or lncrna_id depending on `side`. */
+  target: string;
+  /** "gene" = gene↔miRNA edge; "lncrna" = miRNA↔lncRNA edge. */
+  side: "gene" | "lncrna";
+  tools: string[];
+  tool_count: number;
+}
+
+export interface NetworkPair {
+  gene: string;
+  gene_input?: string | null;
+  gene_label: string;
+  lncrna: string;
+  bridge_mirnas: string[];
+}
+
+export interface NetworkSummary {
+  mode: "pairs" | "discovery";
+  gene_count: number;
+  mirna_count: number;
+  lncrna_count: number;
+  edge_count: number;
+  pair_count: number;
+  truncated: boolean;
+}
+
+export interface NetworkResponse {
+  job_id: string;
+  mode: "pairs" | "discovery";
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  pairs: NetworkPair[];
+  summary: NetworkSummary;
+}
+
 export interface MirnaValidationResponse {
   valid: boolean;
   canonical_id?: string;
@@ -39,6 +136,28 @@ export interface MirnaValidationResponse {
     length_nt?: number;
     source?: string;
   };
+}
+
+export type TargetMatchedBy =
+  | "symbol"
+  | "accession"
+  | "transcript"
+  | "gene"
+  | null;
+
+export interface TargetValidationResult {
+  target: string;
+  valid: boolean;
+  matched_by: TargetMatchedBy;
+}
+
+export interface TargetValidationResponse {
+  genome: string;
+  species: string;
+  target_type: "gene" | "lncrna";
+  results: TargetValidationResult[];
+  valid_count: number;
+  invalid: string[];
 }
 
 export interface CreateJobResponse {
@@ -53,12 +172,21 @@ export interface KillJobResponse {
 
 export type JobStepValue = "processing" | "predicting";
 
-export type ToolProgressStatus = "pending" | "running" | "done";
+export type ToolProgressStatus = "pending" | "running" | "done" | "failed";
 
 export interface ToolProgress {
   status: ToolProgressStatus;
+  /** First time this tool started (across miRNAs and, for mir-network, pools). */
   started_at: number | null;
+  /** Last time it finished. With `started_at` this brackets the tool's work but
+   *  is NOT its duration — the bracket also spans other tools' runs. */
   finished_at: number | null;
+  /** Seconds of actual work, accumulated over every run of this tool. This is
+   *  the real "time costed". Null on jobs predating the field. */
+  elapsed?: number | null;
+  /** Start of the in-flight run, so a running tool can live-count from
+   *  `elapsed`. Null when the tool is not currently running. */
+  running_since?: number | null;
 }
 
 export interface JobProgressInfo {
@@ -169,7 +297,10 @@ export interface JobRecord {
   started_at?: number;
   finished_at?: number;
   genome?: string;
+  workflow?: WorkflowType;
   mirna_id?: string;
+  mirna_ids?: string[];
+  pair_count?: number;
   operations?: string[];
   tools?: string[];
   cores?: number;

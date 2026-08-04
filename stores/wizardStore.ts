@@ -11,6 +11,7 @@ interface WizardState {
   operationSubstep: "shift" | "modification";
   mirnaId: string;
   customMirnaSeq: string;
+  customMirnaName: string;
   useCustomMirnaSeq: boolean;
   preId: string;
   humanReference: "hg19" | "hg38" | "";
@@ -27,6 +28,7 @@ interface WizardState {
   };
   setMirnaId: (mirnaId: string) => void;
   setCustomMirnaSeq: (seq: string) => void;
+  setCustomMirnaName: (name: string) => void;
   setUseCustomMirnaSeq: (use: boolean) => void;
   setPreId: (preId: string) => void;
   setHumanReference: (humanReference: "hg19" | "hg38" | "") => void;
@@ -62,6 +64,7 @@ const initialState: Pick<
   | "operationSubstep"
   | "mirnaId"
   | "customMirnaSeq"
+  | "customMirnaName"
   | "useCustomMirnaSeq"
   | "preId"
   | "humanReference"
@@ -78,6 +81,7 @@ const initialState: Pick<
   operationSubstep: "shift",
   mirnaId: "",
   customMirnaSeq: "",
+  customMirnaName: "",
   useCustomMirnaSeq: false,
   preId: "",
   humanReference: "",
@@ -88,7 +92,7 @@ const initialState: Pick<
   targetGeneIds: "",
   species: "",
   config: {
-    cores: 1,
+    cores: MAX_CORES_PER_JOB,
     maxRuntime: "Default",
     outputFormat: "standard",
   },
@@ -98,6 +102,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
   ...initialState,
   setMirnaId: (mirnaId) => set({ mirnaId }),
   setCustomMirnaSeq: (customMirnaSeq) => set({ customMirnaSeq }),
+  setCustomMirnaName: (customMirnaName) => set({ customMirnaName }),
   setUseCustomMirnaSeq: (useCustomMirnaSeq) => set({ useCustomMirnaSeq }),
   setPreId: (preId) => set({ preId }),
   setHumanReference: (humanReference) => set({ humanReference }),
@@ -183,7 +188,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
     );
 
     const hasMirna = state.useCustomMirnaSeq
-      ? Boolean(state.customMirnaSeq.trim())
+      ? Boolean(state.customMirnaSeq.trim()) && Boolean(state.customMirnaName.trim())
       : Boolean(state.mirnaId);
     const operationValid = state.useCustomMirnaSeq || opState.isValid;
 
@@ -198,7 +203,8 @@ export const useWizardStore = create<WizardState>((set, get) => ({
     };
 
     if (state.useCustomMirnaSeq) {
-      payload.mirna_seq = state.customMirnaSeq.trim().toUpperCase();
+      payload.mirna_seq = state.customMirnaSeq.replace(/\s/g, "").toUpperCase();
+      payload.mirna_id = state.customMirnaName.trim();
     } else {
       payload.mirna_id = state.mirnaId;
     }
@@ -223,7 +229,7 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       payload.pre_id = state.preId;
     }
 
-    if (state.workflow === "mir-target") {
+    if (state.workflow === "mir-target" || state.workflow === "mir-lncrna") {
       const targets = parseTargets(state.targetGeneIds);
       if (targets.length) payload.targets = targets;
     }

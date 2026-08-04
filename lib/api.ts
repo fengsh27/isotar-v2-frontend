@@ -1,6 +1,7 @@
 import type {
   CreateJobPayload,
   CreateJobResponse,
+  CreateNetworkJobPayload,
   EnrichmentResult,
   EnrichmentRunRequest,
   EnrichmentRunResponse,
@@ -9,6 +10,8 @@ import type {
   JobResultsResponse,
   KillJobResponse,
   MirnaValidationResponse,
+  NetworkResponse,
+  TargetValidationResponse,
 } from "@/lib/types";
 
 // When empty the browser sends relative requests (e.g. /api/v1/jobs), which are
@@ -75,6 +78,17 @@ export async function validateMiRNA(
   );
 }
 
+export async function validateTargets(
+  targets: string[],
+  genome: string,
+  targetType: "gene" | "lncrna",
+): Promise<TargetValidationResponse> {
+  return fetchJson<TargetValidationResponse>("/api/v1/targets/validate", {
+    method: "POST",
+    body: JSON.stringify({ targets, genome, target_type: targetType }),
+  });
+}
+
 export async function createJob(
   payload: CreateJobPayload,
 ): Promise<CreateJobResponse> {
@@ -84,8 +98,30 @@ export async function createJob(
   });
 }
 
+export async function createNetworkJob(
+  payload: CreateNetworkJobPayload,
+): Promise<CreateJobResponse> {
+  return fetchJson<CreateJobResponse>("/api/v1/jobs", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getJob(jobId: string): Promise<JobRecord> {
   return fetchJson<JobRecord>(`/api/v1/jobs/${encodeURIComponent(jobId)}`);
+}
+
+export async function getNetwork(
+  jobId: string,
+  params: { topGenes?: number; topLncrna?: number } = {},
+): Promise<NetworkResponse> {
+  const query = new URLSearchParams();
+  if (params.topGenes !== undefined) query.set("topGenes", String(params.topGenes));
+  if (params.topLncrna !== undefined) query.set("topLncrna", String(params.topLncrna));
+  const qs = query.toString() ? `?${query.toString()}` : "";
+  return fetchJson<NetworkResponse>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/network${qs}`,
+  );
 }
 
 export async function killJob(jobId: string): Promise<KillJobResponse> {
@@ -160,7 +196,11 @@ export async function getEnrichment(jobId: string): Promise<EnrichmentResult> {
 }
 
 export function getEnrichmentDotplotUrl(jobId: string): string {
-  return toUrl(`/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment/dotplot`);
+  // Always same-origin: this URL is rendered in an <img src>, and browsers
+  // block insecure image loads on HTTPS pages. The Next.js rewrites in
+  // next.config.ts proxy this to the backend server-side, so we deliberately
+  // skip NEXT_PUBLIC_API_BASE here.
+  return `/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment/dotplot`;
 }
 
 export { ApiError };

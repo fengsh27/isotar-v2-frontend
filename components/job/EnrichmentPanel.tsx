@@ -35,11 +35,13 @@ const ORGANISM_OPTIONS = [
 
 interface Props {
   jobId: string;
+  /** Enrichr organism for this job's species; the selector is locked to it. */
+  organism?: string;
 }
 
-export function EnrichmentPanel({ jobId }: Props) {
+export function EnrichmentPanel({ jobId, organism: organismProp }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [organism, setOrganism] = useState("Human");
+  const [organism, setOrganism] = useState(organismProp ?? "Human");
   const [cutoff, setCutoff] = useState("0.05");
   const [running, setRunning] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -150,6 +152,12 @@ export function EnrichmentPanel({ jobId }: Props) {
                 <Select
                   label="Organism"
                   selectedKeys={[organism]}
+                  isDisabled={Boolean(organismProp)}
+                  description={
+                    organismProp
+                      ? "Determined by the job's species."
+                      : undefined
+                  }
                   onSelectionChange={(keys) => {
                     const value = Array.from(keys)[0] as string | undefined;
                     if (value) setOrganism(value);
