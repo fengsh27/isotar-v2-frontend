@@ -29,8 +29,16 @@ export function Wizard() {
 
   const StepComponent = stepComponents[step];
 
+  // Keyed on workflow so switching between miR-Target and miR-LncRNA remounts
+  // the subtree. Both live on /run and differ only by query string, so React
+  // would otherwise reconcile in place and the fade-rise animation — which only
+  // plays when the element is created — would never replay. Wizard inputs live
+  // in the Zustand store, outside React, so the remount preserves them.
   return (
-    <div className="grid gap-6 fade-rise lg:grid-cols-[210px_minmax(0,1fr)_240px]">
+    <div
+      key={workflow}
+      className="grid gap-6 fade-rise lg:grid-cols-[210px_minmax(0,1fr)_240px]"
+    >
       <aside className="lg:sticky lg:top-6 lg:self-start">
         <StepIndicator />
       </aside>
