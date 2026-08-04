@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Spinner } from "@heroui/react";
 
+import { copyText } from "@/lib/clipboard";
 import { useWizardStore } from "@/stores/wizardStore";
 import {
   hasMirnaDataset,
@@ -260,11 +261,10 @@ export function StepMiRNA() {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(selectedRecord.mature_seq);
+    if (await copyText(selectedRecord.mature_seq)) {
       setCopyState("done");
       window.setTimeout(() => setCopyState("idle"), 1400);
-    } catch {
+    } else {
       setCopyState("error");
     }
   }

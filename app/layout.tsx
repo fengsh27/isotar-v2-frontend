@@ -29,10 +29,13 @@ export default function RootLayout({
                   isoTar
                 </Link>
                 <nav className="flex items-center gap-1 rounded-xl border border-zinc-300 bg-[#e6eee2] p-1 text-base font-medium text-zinc-700">
-                  <Link href="/run?workflow=mir-target&new=1" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                  {/* No `new=1` here: switching workflows from the nav keeps the
+                      wizard inputs entered so far. The landing-page CTAs still
+                      pass it, so "Run isoTar analysis" starts a clean run. */}
+                  <Link href="/run?workflow=mir-target" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     miR-Target Prediction
                   </Link>
-                  <Link href="/run?workflow=mir-lncrna&new=1" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
+                  <Link href="/run?workflow=mir-lncrna" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
                     miR-LncRNA Prediction
                   </Link>
                   <Link href="/network" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
