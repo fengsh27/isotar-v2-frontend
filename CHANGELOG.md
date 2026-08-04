@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.27](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.1...v0.1.27) (2026-08-04)
+
+
+### Features
+
+* **lncrna:** allow PITA in the miR-LncRNA tool step ([85486ae](https://github.com/fengsh27/isotar-v2-frontend/commit/85486ae41179459f7abf52336d1ca8e98182d558))
+* **lncrna:** gate TargetScan/PITA and enrichment for the miR-LncRNA workflow ([b9adcc2](https://github.com/fengsh27/isotar-v2-frontend/commit/b9adcc2a48942e36e62688d451ad4be07db44e0f))
+* **network:** mir-network run flow + Cytoscape visualization ([452b2d7](https://github.com/fengsh27/isotar-v2-frontend/commit/452b2d780765c77332602f82a6b69440e67e7d1e))
+* **network:** rebuild mir-network run flow as a 6-step wizard ([24a2e49](https://github.com/fengsh27/isotar-v2-frontend/commit/24a2e4995b4b17b21806a330b8758f4c5b82024c))
+* **network:** restrict prediction to the pair targets when pairs are given ([df0e902](https://github.com/fengsh27/isotar-v2-frontend/commit/df0e9021c3619a4db59d590db6f081f38a92b8c0))
+* **network:** support per-miRNA precursor (pre_id) selection ([cb79dcb](https://github.com/fengsh27/isotar-v2-frontend/commit/cb79dcb39e029f31fddf18acba8171891dcdcb8a))
+* **progress:** render a failed tool status instead of stuck "Running" ([e2f5898](https://github.com/fengsh27/isotar-v2-frontend/commit/e2f5898ae6c046a6ff8016fd3f86230bd41eedba))
+* **wizard:** enforce mature-seq length 17-30 and require name for custom miRNA ([48f9bdc](https://github.com/fengsh27/isotar-v2-frontend/commit/48f9bdcadd8a9e4d07a047ef054e68102e46f49c))
+
+
+### Bug Fixes
+
+* **download:** stream result.zip through a route handler with a real timeout ([1dd49b6](https://github.com/fengsh27/isotar-v2-frontend/commit/1dd49b64f1302201f0d2a5f01eab0b457996d87e))
+* **progress:** show time costed as work done, not the bracket around it ([9468479](https://github.com/fengsh27/isotar-v2-frontend/commit/9468479b421957719dbe51172cf4cd8ca4f93844))
+
 ### [0.1.26](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.25...v0.1.26) (2026-07-16)
 
 
