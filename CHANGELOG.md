@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.28](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.27...v0.1.28) (2026-08-31)
+
+
+### Bug Fixes
+
+* **tools:** drop roundworm and dog from TargetScan's supported species ([a9e0d59](https://github.com/fengsh27/isotar-v2-frontend/commit/a9e0d59764965558965d11314d945d6fda50d742))
+
 ### [0.1.27](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.1...v0.1.27) (2026-08-04)
 
 
