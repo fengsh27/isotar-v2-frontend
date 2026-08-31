@@ -140,17 +140,29 @@ export const TOOL_OPTIONS = [
 ] as const;
 
 /**
- * Species (by taxonomy-id value) for which TargetScan has prebuilt reference
- * data: Homo sapiens (hg19/hg38), mouse, zebrafish, fruitfly, roundworm, and
- * dog. For any other species TargetScan is disabled in the tool-selection step.
+ * Species (by taxonomy-id value) TargetScan can run against. It ignores the
+ * target FASTA and scores against its own precomputed 3' UTR alignments, so it
+ * only works where TargetScan publishes a dataset AND that dataset carries an
+ * identifier the backend can map back to RefSeq. For any other species
+ * TargetScan is disabled in the tool-selection step.
+ *
+ * Roundworm and dog were previously listed here and are NOT supported:
+ *   - Roundworm: TargetScan does publish worm data, but every worm file keys on
+ *     an internal numeric (e.g. "171590.0") with no RefSeq or Ensembl
+ *     equivalent, so its hits cannot be matched to a target.
+ *   - Dog: TargetScan has no dog release at all. Dog appears only as one row
+ *     inside the human alignment.
+ *
+ * Must stay in sync with TARGETSCAN_GENOMES in the backend
+ * (app_v1/parse_result.py), which rejects a mismatch with HTTP 400. Genome
+ * codes there map to the taxonomy ids here: hg19/hg38 -> 9606, mmu -> 10090,
+ * dme -> 7227, dre -> 7955.
  */
 export const TARGETSCAN_SPECIES = new Set<string>([
   "9606", // Homo sapiens (hg19 / hg38)
   "10090", // Mus musculus (mmu)
-  "7955", // Danio rerio (dre)
   "7227", // Drosophila melanogaster (dme)
-  "6239", // Caenorhabditis elegans (cel)
-  "9615", // Canis lupus familiaris (cfa)
+  "7955", // Danio rerio (dre)
 ]);
 
 /** Tool value of TargetScan in TOOL_OPTIONS (species-restricted). */
