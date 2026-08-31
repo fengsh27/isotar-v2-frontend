@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { MainNav } from "@/components/layout/MainNav";
 import { Providers } from "@/app/providers";
 
 import "./globals.css";
@@ -28,29 +29,7 @@ export default function RootLayout({
                   <span className="inline-block h-3 w-3 rounded-full bg-teal-600" />
                   isoTar
                 </Link>
-                <nav className="flex items-center gap-1 rounded-xl border border-zinc-300 bg-[#e6eee2] p-1 text-base font-medium text-zinc-700">
-                  {/* No `new=1` here: switching workflows from the nav keeps the
-                      wizard inputs entered so far. The landing-page CTAs still
-                      pass it, so "Run isoTar analysis" starts a clean run. */}
-                  <Link href="/run?workflow=mir-target" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
-                    miR-Target Prediction
-                  </Link>
-                  <Link href="/run?workflow=mir-lncrna" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
-                    miR-LncRNA Prediction
-                  </Link>
-                  <Link href="/network" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
-                    miR-Network Visualization
-                  </Link>
-                  <Link href="/jobs" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
-                    Jobs
-                  </Link>
-                  <Link href="/docs" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
-                    Docs
-                  </Link>
-                  <Link href="/about" className="rounded-lg px-3.5 py-2 transition-colors hover:bg-teal-50 hover:text-teal-700">
-                    About
-                  </Link>
-                </nav>
+                <MainNav />
               </div>
             </header>
 
