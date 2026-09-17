@@ -146,23 +146,25 @@ export const TOOL_OPTIONS = [
  * identifier the backend can map back to RefSeq. For any other species
  * TargetScan is disabled in the tool-selection step.
  *
- * Roundworm and dog were previously listed here and are NOT supported:
- *   - Roundworm: TargetScan does publish worm data, but every worm file keys on
- *     an internal numeric (e.g. "171590.0") with no RefSeq or Ensembl
- *     equivalent, so its hits cannot be matched to a target.
- *   - Dog: TargetScan has no dog release at all. Dog appears only as one row
- *     inside the human alignment.
+ * Roundworm's TargetScan ids ("171687.1") name a gene rather than a transcript,
+ * so the backend reports each worm hit against every RefSeq transcript of that
+ * gene, as it already does for zebrafish.
+ *
+ * Dog is NOT supported: TargetScan has no dog release at all. Dog appears only
+ * as one row inside the human alignment. Rat, macaque, chimpanzee and opossum
+ * have no release either.
  *
  * Must stay in sync with TARGETSCAN_GENOMES in the backend
  * (app_v1/parse_result.py), which rejects a mismatch with HTTP 400. Genome
  * codes there map to the taxonomy ids here: hg19/hg38 -> 9606, mmu -> 10090,
- * dme -> 7227, dre -> 7955.
+ * dme -> 7227, dre -> 7955, cel -> 6239.
  */
 export const TARGETSCAN_SPECIES = new Set<string>([
   "9606", // Homo sapiens (hg19 / hg38)
   "10090", // Mus musculus (mmu)
   "7227", // Drosophila melanogaster (dme)
   "7955", // Danio rerio (dre)
+  "6239", // Caenorhabditis elegans (cel)
 ]);
 
 /** Tool value of TargetScan in TOOL_OPTIONS (species-restricted). */
