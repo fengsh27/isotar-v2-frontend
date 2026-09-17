@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.29](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.28...v0.1.29) (2026-09-17)
+
+
+### Features
+
+* **tools:** enable TargetScan for roundworm ([3065f35](https://github.com/fengsh27/isotar-v2-frontend/commit/3065f3572489297b73ef937975e2d09f52612928))
+
 ### [0.1.28](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.27...v0.1.28) (2026-08-31)
 
 
