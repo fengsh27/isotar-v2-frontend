@@ -18,11 +18,14 @@ export const WIZARD_STEPS_TARGET = [
   "Review & Run",
 ] as const;
 
+// No "Prediction Tools" step: mir-network always runs the full tool set for the
+// species (see networkToolsForSpecies), because the ceRNA score's denominators
+// are the tools run per pool and a user-varied tool list would make scores
+// incomparable between jobs.
 export const WIZARD_STEPS_NETWORK = [
   "Species",
-  "miRNAs",
+  "miRNA",
   "ceRNA Pairs",
-  "Prediction Tools",
   "Configuration",
   "Review & Run",
 ] as const;
@@ -34,14 +37,23 @@ export const WIZARD_STEPS = WIZARD_STEPS_LNCRNA;
 // Keep these two in sync when tuning.
 export const MAX_CORES_PER_JOB = 8;
 
-// UI cap on miRNAs per mir-network job. Stricter than the backend's
-// ISOTAR_MAX_NETWORK_MIRNAS (default 20) — the /api/v1/jobs endpoint still
-// rejects anything above the backend limit, so this only tightens the UI.
-export const MAX_NETWORK_MIRNAS = 5;
+// miRNAs per mir-network job. Exactly one: the pair correlations
+// corr(miRNA, gene) and corr(miRNA, lncRNA) name a single miRNA, so a second
+// one would make every pasted correlation ambiguous. Variants of that miRNA are
+// still unlimited — they are the module's comparison axis. Far stricter than
+// the backend's ISOTAR_MAX_NETWORK_MIRNAS (default 20), which still rejects
+// anything above its own limit.
+export const MAX_NETWORK_MIRNAS = 1;
 
 // UI cap on pasted (gene, lncRNA) pairs per mir-network job. Submission is
 // blocked above this count to keep the ceRNA graph tractable.
 export const MAX_NETWORK_PAIRS = 100;
+
+// At least one pair is required. Discovery mode (no pairs) ranks candidate
+// targets by how many distinct miRNAs hit them, which carries no signal when a
+// job has exactly one miRNA — every target would tie at degree 1. The backend
+// still supports discovery for other API clients.
+export const MIN_NETWORK_PAIRS = 1;
 
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
@@ -60,11 +72,10 @@ export const STEP_CONTEXT_TARGET: Record<number, string> = {
 
 export const STEP_CONTEXT_NETWORK: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
-  1: "Pick up to 5 miRNAs from the per-species catalog. The job runs every miRNA against both the gene and lncRNA pools.",
-  2: "Optionally paste up to 100 (gene, lncRNA) hypotheses — pairs mode keeps only ceRNA pairs bridged by at least one miRNA. Skip for discovery mode.",
-  3: "Select one or more prediction tools. TargetScan runs on the gene pool only.",
-  4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
-  5: "Review your run request, then start an immutable asynchronous job.",
+  1: "Pick one miRNA from the per-species catalog — the pair correlations refer to it. Add variants to compare shifted or modified forms against the wild type in the same job.",
+  2: "Paste up to 100 (gene, lncRNA) hypotheses with optional correlation magnitudes. Only pairs bridged by the miRNA appear in the graph, ranked by ceRNA score.",
+  3: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
+  4: "Review your run request, then start an immutable asynchronous job.",
 };
 
 export const WORKFLOW_LABELS: Record<WorkflowType, string> = {
@@ -251,3 +262,32 @@ export const STATUS_COLOR: Record<
   failed: "danger",
   killed: "default",
 };
+
+/**
+ * Tools a mir-network job runs on the gene pool. Not user-selectable: the ceRNA
+ * score divides by the tools actually run, so letting users vary the set would
+ * make scores incomparable between jobs. TargetScan drops out for species with
+ * no TargetScan release — the backend rejects the job outright otherwise, which
+ * would make those species unusable now that there is no tool step to fix it in.
+ */
+export function networkToolsForSpecies(species: string): string[] {
+  return TOOL_OPTIONS.map((tool) => tool.value).filter((tool) =>
+    isToolSupportedForSpecies(tool, species),
+  );
+}
+
+/**
+ * The ceRNA score's denominators for a species: every network tool on the gene
+ * side, minus TargetScan on the lncRNA side. Mirrors the backend's
+ * _network_tool_totals, which derives the same thing from the job manifest.
+ */
+export function networkToolTotals(species: string): {
+  gene: number;
+  lncrna: number;
+} {
+  const tools = networkToolsForSpecies(species);
+  return {
+    gene: tools.length,
+    lncrna: tools.filter((tool) => !LNCRNA_INCOMPATIBLE_TOOLS.has(tool)).length,
+  };
+}

@@ -52,7 +52,7 @@ export function StepConfig() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="flat" onPress={back}>
-          Back: Prediction Tools
+          Back: ceRNA Pairs
         </Button>
         <Button color="primary" onPress={next}>
           Next: Review &amp; Run

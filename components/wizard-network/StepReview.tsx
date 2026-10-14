@@ -5,7 +5,13 @@ import { Alert, Button, Chip } from "@heroui/react";
 import { useRouter } from "next/navigation";
 
 import { createNetworkJob } from "@/lib/api";
-import { SPECIES_OPTIONS, TOOL_OPTIONS, WORKFLOW_LABELS } from "@/lib/constants";
+import {
+  networkToolsForSpecies,
+  networkToolTotals,
+  SPECIES_OPTIONS,
+  TOOL_OPTIONS,
+  WORKFLOW_LABELS,
+} from "@/lib/constants";
 import { trackJobId } from "@/lib/jobStorage";
 import { evaluateOperationState } from "@/lib/operation";
 import { parsePairs } from "@/lib/pairs";
@@ -30,7 +36,6 @@ export function StepReview() {
   const preIds = useNetworkWizardStore((state) => state.preIds);
   const variants = useNetworkWizardStore((state) => state.variants);
   const pairsText = useNetworkWizardStore((state) => state.pairsText);
-  const tools = useNetworkWizardStore((state) => state.tools);
   const cores = useNetworkWizardStore((state) => state.cores);
   const back = useNetworkWizardStore((state) => state.back);
   const reset = useNetworkWizardStore((state) => state.reset);
@@ -41,6 +46,10 @@ export function StepReview() {
 
   const payload = toJobPayload();
   const pairs = useMemo(() => parsePairs(pairsText).pairs, [pairsText]);
+  // Fixed per species rather than chosen: the ceRNA score divides by the tools
+  // actually run, so the set is a property of the job, not a user preference.
+  const tools = useMemo(() => networkToolsForSpecies(species), [species]);
+  const toolTotals = useMemo(() => networkToolTotals(species), [species]);
   // Precursor choices scoped to currently-selected miRNAs (matches payload).
   const scopedPreIds = useMemo(
     () =>
@@ -99,7 +108,8 @@ export function StepReview() {
     pairs: pairs.length ? pairs : undefined,
     mode,
     prediction: {
-      tools: tools.map((tool) => ({ name: tool })),
+      tools: tools.map((tool: string) => ({ name: tool })),
+      tool_totals: toolTotals,
     },
     species: {
       taxonomy_id: species,
@@ -226,7 +236,7 @@ export function StepReview() {
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <strong>Tools:</strong>
-          {tools.map((tool) => {
+          {tools.map((tool: string) => {
             const label = TOOL_OPTIONS.find((option) => option.value === tool)?.label ?? tool;
             return (
               <Chip key={tool} size="sm" variant="flat" color="primary">
@@ -235,6 +245,11 @@ export function StepReview() {
             );
           })}
         </div>
+        <p className="text-xs text-zinc-500">
+          All tools available for this species run — they are not selectable, because the
+          ceRNA score is scored out of the tools actually run ({toolTotals.gene} on the
+          gene pool, {toolTotals.lncrna} on the lncRNA pool, which never runs TargetScan).
+        </p>
         <p>
           <strong>Configuration:</strong> {cores} cores
         </p>

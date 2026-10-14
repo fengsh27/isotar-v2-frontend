@@ -87,7 +87,7 @@ export function StepSpecies() {
 
       <div className="flex flex-wrap items-center justify-end gap-3">
         <Button color="primary" onPress={next} isDisabled={!canProceed}>
-          Next: miRNAs
+          Next: miRNA
         </Button>
       </div>
     </section>
