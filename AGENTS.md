@@ -1,213 +1,66 @@
-## 1. Project Overview
+# AGENTS.md
 
-**isotar** is a web-based bioinformatics tool for **miRNA-centered target prediction and downstream enrichment analysis**.
+**The canonical model of this codebase lives in [`CLAUDE.md`](./CLAUDE.md).
+Read it before editing anything here.**
 
-### Core workflow
-```
+This file used to carry its own copy of that model and fell out of date (it
+still described a single-workflow, single-miRNA-per-job app). Rather than keep
+two copies in sync, it is now a pointer. Put project rules in `CLAUDE.md`.
 
-miRNA → operation → prediction tools → species → configuration → job → results
+## Orientation (30 seconds)
 
-```
+**isotar** is a Next.js (App Router) frontend for a miRNA target-prediction
+backend. Users compose a job through a wizard, submit it, and watch the async
+run to completion.
 
-### Key characteristics
-- miRNA is the **primary biological entity**
-- Operations (e.g., *shift*, *modification*) are **semantic transformations**, not parameters
-- Jobs are **asynchronous, reproducible, and shareable**
-- Each job produces a **manifest** that fully captures provenance
+Three workflows, on two routes:
 
----
-
-## 2. Technology Stack
-
-### Frontend
-- **Next.js (App Router)**
-- **HeroUI** (component library)
-- **Tailwind CSS**
-- **Zustand** (wizard state management)
-
-### Backend (assumed / external)
-- RESTful API
-- Async job execution (HPC / cluster-friendly)
-- Job-scoped result storage
-
-### Canonical communication pattern
-```
-
-Frontend (stateless) → API → Job → Results
-
-````
-
----
-
-## 3. Source of Truth Hierarchy
-
-LLM agents MUST respect the following hierarchy:
-
-1. **Job Manifest** (YAML / JSON)
-2. Backend API contracts
-3. Frontend state (wizard store)
-4. UI components
-
-⚠️ The UI is **not** the source of truth — it only reflects job state.
-
----
-
-## 4. Core Domain Concepts (Do NOT redefine)
-
-### 4.1 miRNA
-- Single miRNA per job (v1)
-- Example: `hsa-miR-495-3p`
-- Validated against authoritative sources (e.g., miRBase)
-- Species-specific interpretation
-
-### 4.2 Operation
-Operations describe **what is done to the miRNA**, conceptually.
-
-Allowed values:
-- `shift`
-- `modification`
-
-Operations are:
-- Optional
-- Chosen **before** tools
-
----
-
-### 4.3 Prediction Tools
-- Examples: `Targetscan`, `miRmap`, `miRanda`, `DMISO`, `PITA`, `RNAhybrid`
-- Multiple tools MAY be selected
-- Tool scores are preserved verbatim
-- Aggregation happens **after prediction**
-
----
-
-### 4.4 Species
-- Mandatory
-- Determines biological scope
-- Changing species invalidates predictions
-
----
-
-### 4.5 Job
-A job is:
-- Immutable once started
-- Identified by `job_id`
-- Fully described by its manifest
-- Executed asynchronously
-
----
-
-## 5. Job Manifest (Critical Artifact)
-
-Every job MUST have a manifest.
-
-### Required properties
-- miRNA
-- operation
-- tools (with versions)
-- species
-- configuration
-- software version
-
-### Example (simplified)
-```yaml
-job_id: isotar-2026-00123
-input:
-  mirna:
-    id: hsa-miR-495-3p
-operation:
-  type: shift
-prediction:
-  tools:
-    - name: Targetscan
-      version: "8.0"
-species:
-  taxonomy_id: 9606
-configuration:
-  cores: 8
-software:
-  isotar_version: "0.1.0"
-````
-
-LLM agents must **never fabricate** manifest fields.
-
----
-
-## 6. Frontend Architecture (Next.js)
-
-### App Router structure
+| Workflow | Key ID | Route |
+|---|---|---|
+| miR-Target Prediction | `mir-target` | `/run?workflow=mir-target` |
+| miR-LncRNA Prediction | `mir-lncrna` | `/run?workflow=mir-lncrna` |
+| miR-Network Visualization | `mir-network` | `/network` |
 
 ```
-app/
-  run/        → analysis wizard
-  jobs/       → job list
-  jobs/[id]/  → job status & results
+species → miRNA(s) → [operation | pairs + variants] → prediction tools → configuration → job → results
 ```
 
-### Wizard state
+Where things live:
 
-* Stored in **Zustand**
-* Not persisted beyond job creation
-* Canonical fields:
+```
+app/            routes (run/, network/, jobs/, jobs/[jobId]/, docs/, about/)
+components/     wizard/ (single-miRNA), wizard-network/, job/ (results)
+stores/         wizardStore.ts, networkWizardStore.ts  (Zustand, ephemeral)
+lib/            api.ts, constants.ts, types.ts + domain helpers
+data/           per-species miRNA catalogs (JSON)
+```
 
-  * `mirnaId`
-  * `operation`
-  * `tools`
-  * `species`
-  * `config`
+## The six things that bite
 
-⚠️ LLMs must not introduce parallel state systems.
+1. **The UI is not the source of truth.** Order of authority: job manifest →
+   backend API contract → wizard store → UI components. See `CLAUDE.md` §3.
+2. **`toJobPayload()` is the single submission gate.** Both stores return `null`
+   instead of a partial payload. New validation belongs there, not only in a
+   step component — a user can jump back to Review and skip the step.
+3. **Don't add a second state system** or a second parser. Operation, shift,
+   target and pair parsing are shared in `lib/` precisely so the two wizards
+   cannot drift from each other or from the backend.
+4. **Tool availability is rule-driven.** TargetScan is species-restricted
+   (`TARGETSCAN_SPECIES`, must match the backend's `TARGETSCAN_GENOMES` or the
+   API 400s) and lncRNA-incompatible. Go through
+   `isToolSupportedForSpecies` / `isToolSupportedForWorkflow`.
+5. **`mir-network` is the odd one out.** Exactly one miRNA, no tool step (the
+   set follows the species, because the ceRNA score divides by it), and at
+   least one ceRNA pair is mandatory. On the result, `score` is the *computed*
+   ceRNA score, not anything the user typed — their correlations come back
+   under `corr`. `CLAUDE.md` §5 has the formula and the WT-vs-variant rule.
+6. **`mir-target` and `mir-lncrna` share one store instance.** This is a known
+   defect with four documented symptoms, up to "a `mir-lncrna` job can be
+   submitted with RefSeq gene targets". `TODO.md` has the analysis and the
+   recommended fix — read it before touching `setWorkflow`, `StepTools`'
+   pruning effect, or `targetGeneIds`.
 
----
+## Checks
 
-## 7. UX Rules (Strict)
-
-LLM-generated UI code MUST follow these rules:
-
-1. **Progressive disclosure**
-
-   * Advanced configuration is collapsed by default
-2. **Explicit confirmation**
-
-   * Review & Run step is mandatory
-3. **No silent defaults**
-
-   * Defaults must be visible or documented
-4. **Biology-aware language**
-
-   * Avoid generic terms like “input data” when “miRNA” is correct
-
----
-
-## 8. Results Model (Read-Only)
-
-Results are:
-
-* Job-scoped
-* Read-only
-* Structured into:
-
-  * Summary
-  * Predicted targets
-  * Enrichment
-
-LLMs must not mutate or reinterpret results client-side.
-
----
-
-## 9. Error Handling Philosophy
-
-Errors should be:
-
-* Explicit
-* Actionable
-* Job-scoped
-
-Examples:
-
-* Invalid miRNA ID
-* Tool incompatibility
-* Job execution failure
-
-⚠️ Never hide failures behind generic messages.
-
+No test suite. `yarn lint` and `yarn build` are the automated checks.
+Never fabricate manifest or payload fields.

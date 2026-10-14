@@ -29,14 +29,26 @@ export interface CreateJobPayload {
   targets?: string[];
 }
 
-/** One hypothesized ceRNA (gene, lncRNA, score) triple supplied for a network
- *  job. `score` is a caller-provided ranking / correlation for the pair — the
- *  backend requires it (a finite number, not bool) and carries it through
- *  untouched for downstream use, though the frontend does not consume it yet. */
+/** Correlation magnitudes for one ceRNA pair, each `0 <= x <= 1`. Every key is
+ *  optional: an omitted one is recorded by the backend in `corr_defaulted` and
+ *  scores as 1, so a pair with no correlation data falls back to prediction
+ *  consensus alone rather than scoring zero. Sent as magnitudes because the
+ *  score multiplies all three — see `parsePairs`. */
+export interface PairCorrelations {
+  /** corr(miRNA, gene) */
+  mirna_gene?: number;
+  /** corr(miRNA, lncRNA) */
+  mirna_lncrna?: number;
+  /** corr(gene, lncRNA) */
+  gene_lncrna?: number;
+}
+
+/** One hypothesized ceRNA (gene, lncRNA) pair supplied for a network job. */
 export interface NetworkPairInput {
   gene: string;
   lncrna: string;
-  score: number;
+  /** Omitted entirely when the user supplied no correlations for this pair. */
+  corr?: PairCorrelations;
 }
 
 /** One operation spec applied to a miRNA to produce a variant graph node.
@@ -65,6 +77,8 @@ export interface CreateNetworkJobPayload {
   tools: string[];
   genome?: string;
   cores?: number;
+  /** Required by the wizard (discovery mode is not offered in the UI), though
+   *  the backend still accepts a pairless job. */
   pairs?: NetworkPairInput[];
   /** Scan only the pairs' own gene/lncRNA targets instead of the whole
    *  reference. Sent whenever `pairs` is present — a pairs run only ever
@@ -99,11 +113,41 @@ export interface NetworkEdge {
   tool_count: number;
 }
 
+/** One bridging miRNA node's support for a pair. Variants are separate nodes
+ *  with their own tool counts, so a pair carries one row per bridge. */
+export interface NetworkPairBridge {
+  /** miRNA node id — the base id for WT, the full variant header otherwise. */
+  mirna: string;
+  is_variant: boolean;
+  /** Tools predicting this miRNA node against the pair's gene / lncRNA. */
+  gene_tools: number;
+  lncrna_tools: number;
+  /** `sqrt((gene_tools / total) * (lncrna_tools / total))`, 0..1. */
+  consensus: number;
+  /** `corr_product * consensus`. */
+  score: number;
+}
+
 export interface NetworkPair {
   gene: string;
   gene_input?: string | null;
   gene_label: string;
   lncrna: string;
+  /** Effective correlations used for scoring (defaults filled in). */
+  corr: Required<PairCorrelations>;
+  /** Correlation keys the user left blank, which scored as 1. */
+  corr_defaulted: (keyof PairCorrelations)[];
+  /** Product of the three correlations — constant across this pair's bridges. */
+  corr_product: number;
+  /** The WT node's score: a pair-level score is a claim about the real miRNA,
+   *  so an in-silico variant never sets it. `null` when WT does not bridge the
+   *  pair at all — the pair is still returned, since a variant bridging what WT
+   *  cannot is itself a result. */
+  score: number | null;
+  score_version: number;
+  /** Highest-scoring node whether or not it is WT. */
+  best_bridge: { mirna: string; score: number; is_variant: boolean };
+  bridges: NetworkPairBridge[];
   bridge_mirnas: string[];
 }
 
@@ -115,6 +159,9 @@ export interface NetworkSummary {
   edge_count: number;
   pair_count: number;
   truncated: boolean;
+  score_version: number;
+  /** Score denominators: tools actually run per pool (lncRNA drops TargetScan). */
+  tool_totals: { gene: number; lncrna: number };
 }
 
 export interface NetworkResponse {

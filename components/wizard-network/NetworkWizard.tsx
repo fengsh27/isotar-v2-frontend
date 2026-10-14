@@ -6,7 +6,6 @@ import { StepMirnas } from "@/components/wizard-network/StepMirnas";
 import { StepPairs } from "@/components/wizard-network/StepPairs";
 import { StepReview } from "@/components/wizard-network/StepReview";
 import { StepSpecies } from "@/components/wizard-network/StepSpecies";
-import { StepTools } from "@/components/wizard-network/StepTools";
 import {
   STEP_CONTEXT_NETWORK,
   WIZARD_STEPS_NETWORK,
@@ -14,7 +13,7 @@ import {
 } from "@/lib/constants";
 import { useNetworkWizardStore } from "@/stores/networkWizardStore";
 
-const STEPS = [StepSpecies, StepMirnas, StepPairs, StepTools, StepConfig, StepReview];
+const STEPS = [StepSpecies, StepMirnas, StepPairs, StepConfig, StepReview];
 
 export function NetworkWizard() {
   const step = useNetworkWizardStore((state) => state.step);

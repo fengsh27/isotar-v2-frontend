@@ -85,6 +85,8 @@ export function StepMirnas() {
 
   // Toggle selection, defaulting multi-precursor miRNAs to their first
   // precursor so a choice is always recorded before submission.
+  // Picking a different miRNA replaces the current one (the store prunes the
+  // previous miRNA's precursor choice and variants with it).
   const handleToggle = (id: string) => {
     const wasSelected = selectedMirnas.includes(id);
     toggleMirna(id);
@@ -99,10 +101,12 @@ export function StepMirnas() {
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-zinc-900">Select miRNAs</h2>
+        <h2 className="text-xl font-semibold text-zinc-900">Select miRNA</h2>
         <p className="mt-1 text-sm text-zinc-600">
-          Pick up to {MAX_NETWORK_MIRNAS} miRNAs. The job runs every selected miRNA against both
-          the gene (3′ UTR) and lncRNA target pools.
+          Pick one miRNA. It is run against both the gene (3′ UTR) and lncRNA target
+          pools, and the correlations you paste on the next step refer to it — which is
+          why a job carries exactly one. Add variants below to compare shifted or
+          modified forms against the wild type in the same run.
         </p>
       </div>
 
@@ -117,7 +121,7 @@ export function StepMirnas() {
               : "text-xs text-zinc-500"
           }
         >
-          {selectedMirnas.length} / {MAX_NETWORK_MIRNAS} selected
+          {selectedMirnas.length ? selectedMirnas[0] : "none selected"}
         </span>
       </div>
 
@@ -168,21 +172,14 @@ export function StepMirnas() {
             <div className="grid gap-1">
               {filteredIds.map((id) => {
                 const checked = selectedMirnas.includes(id);
-                const disabled = !checked && selectedMirnas.length >= MAX_NETWORK_MIRNAS;
                 return (
                   <button
                     key={id}
                     type="button"
-                    onClick={() => {
-                      if (disabled) return;
-                      handleToggle(id);
-                    }}
-                    disabled={disabled}
+                    onClick={() => handleToggle(id)}
                     className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${checked
                         ? "bg-teal-100 text-teal-900"
-                        : disabled
-                          ? "cursor-not-allowed text-zinc-400"
-                          : "text-zinc-700 hover:bg-zinc-100"
+                        : "text-zinc-700 hover:bg-zinc-100"
                       }`}
                   >
                     <span className="inline-block w-4">{checked ? "✓" : ""}</span>
@@ -236,7 +233,7 @@ export function StepMirnas() {
         <Alert
           color="warning"
           variant="flat"
-          title={`Select at most ${MAX_NETWORK_MIRNAS} miRNAs.`}
+          title={`Select exactly ${MAX_NETWORK_MIRNAS} miRNA.`}
         />
       ) : null}
 

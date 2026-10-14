@@ -4,13 +4,17 @@ import {
   MAX_CORES_PER_JOB,
   MAX_NETWORK_MIRNAS,
   MAX_NETWORK_PAIRS,
+  MIN_NETWORK_PAIRS,
+  networkToolsForSpecies,
   SPECIES_OPTIONS,
 } from "@/lib/constants";
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
-import { parsePairs } from "@/lib/pairs";
+import { parsePairs, toPairPayload } from "@/lib/pairs";
 import type { CreateNetworkJobPayload, NetworkVariantSpec } from "@/lib/types";
 
-const TOTAL_STEPS = 6;
+// Species -> miRNA -> ceRNA Pairs -> Configuration -> Review. There is no
+// tool step: mir-network always runs the full tool set for the species.
+const TOTAL_STEPS = 5;
 
 /** In-progress editor state for one variant. Raw input is preserved so users
  *  can navigate between steps without losing partial entries; serialization
@@ -48,7 +52,12 @@ interface NetworkWizardState {
    *  editor row for WT. */
   variants: Record<string, NetworkVariantEditor[]>;
   pairsText: string;
-  tools: string[];
+  /** Pair identifiers that /api/v1/targets/validate rejected, recorded by
+   *  StepPairs so `toJobPayload` can refuse them too. An unknown gene would be
+   *  rejected by the backend anyway, but an unknown lncRNA is accepted and then
+   *  silently bridges nothing — the pair would vanish from the result with no
+   *  explanation, which is exactly what validating up front prevents. */
+  invalidPairTargets: { genes: string[]; lncrnas: string[] };
   cores: number;
   setSpecies: (species: string) => void;
   setHumanReference: (humanReference: "hg19" | "hg38" | "") => void;
@@ -63,8 +72,7 @@ interface NetworkWizardState {
     patch: Partial<Omit<NetworkVariantEditor, "key">>,
   ) => void;
   setPairsText: (text: string) => void;
-  toggleTool: (tool: string) => void;
-  setTools: (tools: string[]) => void;
+  setInvalidPairTargets: (targets: { genes: string[]; lncrnas: string[] }) => void;
   setCores: (cores: number) => void;
   goToStep: (step: number) => void;
   next: () => void;
@@ -82,7 +90,7 @@ const initialState: Pick<
   | "preIds"
   | "variants"
   | "pairsText"
-  | "tools"
+  | "invalidPairTargets"
   | "cores"
 > = {
   step: 0,
@@ -92,7 +100,7 @@ const initialState: Pick<
   preIds: {},
   variants: {},
   pairsText: "",
-  tools: [],
+  invalidPairTargets: { genes: [], lncrnas: [] },
   cores: MAX_CORES_PER_JOB,
 };
 
@@ -100,6 +108,8 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
   ...initialState,
   setSpecies: (species) => set({ species }),
   setHumanReference: (humanReference) => set({ humanReference }),
+  // Exactly one miRNA per job, so selecting a new one replaces the current
+  // choice rather than adding to it; clicking the selected one clears it.
   toggleMirna: (id) =>
     set((state) => {
       if (state.selectedMirnas.includes(id)) {
@@ -117,7 +127,9 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
           variants,
         };
       }
-      return { selectedMirnas: [...state.selectedMirnas, id] };
+      // Replacing the selection drops the previous miRNA's precursor choice and
+      // variant editors, which belong to a miRNA no longer in the job.
+      return { selectedMirnas: [id], preIds: {}, variants: {} };
     }),
   setSelectedMirnas: (selectedMirnas) =>
     set((state) => {
@@ -161,14 +173,11 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
         ),
       },
     })),
-  setPairsText: (pairsText) => set({ pairsText }),
-  toggleTool: (tool) =>
-    set((state) => ({
-      tools: state.tools.includes(tool)
-        ? state.tools.filter((t) => t !== tool)
-        : [...state.tools, tool],
-    })),
-  setTools: (tools) => set({ tools }),
+  // Editing the text invalidates any identifier check made against the old
+  // text; StepPairs re-validates and repopulates this.
+  setPairsText: (pairsText) =>
+    set({ pairsText, invalidPairTargets: { genes: [], lncrnas: [] } }),
+  setInvalidPairTargets: (invalidPairTargets) => set({ invalidPairTargets }),
   setCores: (cores) => set({ cores }),
   goToStep: (step) => set({ step: Math.min(Math.max(step, 0), TOTAL_STEPS - 1) }),
   next: () => set((state) => ({ step: Math.min(state.step + 1, TOTAL_STEPS - 1) })),
@@ -178,14 +187,18 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
     const state = get();
     if (!state.selectedMirnas.length) return null;
     if (state.selectedMirnas.length > MAX_NETWORK_MIRNAS) return null;
-    if (!state.tools.length) return null;
-    if (state.species === "9606" && !state.humanReference) return null;
     if (!state.species) return null;
+    if (state.species === "9606" && !state.humanReference) return null;
+
+    // Tools are a function of the species, not a user choice — the ceRNA score
+    // divides by the tools actually run, so the set has to be fixed per job.
+    const tools = networkToolsForSpecies(state.species);
+    if (!tools.length) return null;
 
     const payload: CreateNetworkJobPayload = {
       workflow: "mir-network",
       mirna_ids: state.selectedMirnas,
-      tools: state.tools,
+      tools,
       cores: Math.max(1, Math.min(state.cores, MAX_CORES_PER_JOB)),
     };
 
@@ -201,17 +214,29 @@ export const useNetworkWizardStore = create<NetworkWizardState>((set, get) => ({
     // caller reaches Review with typed-but-invalid pair rows.
     const parsedPairs = parsePairs(state.pairsText);
     if (parsedPairs.malformed.length) return null;
+    if (parsedPairs.pairs.length < MIN_NETWORK_PAIRS) return null;
     if (parsedPairs.pairs.length > MAX_NETWORK_PAIRS) return null;
-    if (parsedPairs.pairs.length) {
-      payload.pairs = parsedPairs.pairs;
-      // With pairs, the graph only ever shows the pair bridges, so scanning the
-      // whole reference computes ~120k interactions to keep ~40. Restrict each
-      // pool to its own pair targets: same graph, hours -> seconds. Only valid
-      // alongside pairs (the backend 400s otherwise), hence set here rather
-      // than unconditionally. A discovery run has nothing to restrict to and
-      // still scans the full reference.
-      payload.restrict_to_pairs = true;
+
+    // Identifiers the backend's reference data does not know. Checked here as
+    // well as in StepPairs so a jump straight to Review cannot bypass it.
+    const invalidGenes = new Set(state.invalidPairTargets.genes);
+    const invalidLncrnas = new Set(state.invalidPairTargets.lncrnas);
+    if (
+      parsedPairs.pairs.some(
+        (pair) => invalidGenes.has(pair.gene) || invalidLncrnas.has(pair.lncrna),
+      )
+    ) {
+      return null;
     }
+
+    payload.pairs = parsedPairs.pairs.map(toPairPayload);
+    // The graph only ever shows the pair bridges, so scanning the whole
+    // reference computes ~120k interactions to keep ~40. Restrict each pool to
+    // its own pair targets: same graph, hours -> seconds. Valid only alongside
+    // pairs (the backend 400s otherwise), which the gate above guarantees.
+    // Note this means /result and the result zip carry only the pair targets,
+    // never a genome-wide table.
+    payload.restrict_to_pairs = true;
 
     // Only forward precursor choices for currently-selected miRNAs. Backend
     // treats `pre_ids` as optional and defaults to its own resolution when an
