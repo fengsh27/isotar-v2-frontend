@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.2.0](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.29...v0.2.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **network:** `score` on GET /api/v1/jobs/<id>/network is now the
+computed ceRNA score, not the number the user supplied; the user's input
+comes back under `corr`. Network jobs always send restrict_to_pairs, so
+/result and the result zip carry only the pair targets — never a
+genome-wide table.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+
+### Features
+
+* **network:** score ceRNA pairs from user correlations ([63b5381](https://github.com/fengsh27/isotar-v2-frontend/commit/63b5381cf4d0bb61ca5362cd7d334df56bbfe1df))
+
 ### [0.1.29](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.28...v0.1.29) (2026-09-17)
 
 
