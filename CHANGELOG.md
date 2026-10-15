@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.1](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.0...v0.2.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **Network:** Merge pull request [#20](https://github.com/fengsh27/isotar-v2-frontend/issues/20) from fengsh27/wip/fengsh/fix/network-filter-bug ([64ea3b0](https://github.com/fengsh27/isotar-v2-frontend/commit/64ea3b099918451850602d4a55a66c6d048185a5))
+
 ## [0.2.0](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.1.29...v0.2.0) (2026-10-14)
 
 
