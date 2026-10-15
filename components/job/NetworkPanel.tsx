@@ -43,8 +43,14 @@ function computeVisible(
   minScore: number,
   includeVariantOnly: boolean,
 ): Visible {
+  // A variant-only pair has no WT score, but `best_bridge` always carries a
+  // real number, so it is still thresholded — the checkbox decides whether the
+  // category is in scope at all, not whether it escapes the slider. Exempting
+  // it entirely left pairs on screen at minScore 1.00.
   const pairs = data.pairs.filter((pair) =>
-    pair.score === null ? includeVariantOnly : pair.score >= minScore,
+    pair.score === null
+      ? includeVariantOnly && pair.best_bridge.score >= minScore
+      : pair.score >= minScore,
   );
 
   const geneEdges = new Map<string, NetworkEdge>();
@@ -137,9 +143,20 @@ export function NetworkPanel({ jobId }: Props) {
     };
   }, [jobId]);
 
+  // Whether the variant-only category exists at all, so the checkbox does not
+  // appear and vanish as the slider moves past the last of them.
   const variantOnlyCount = useMemo(
     () => (data?.pairs ?? []).filter((p) => p.score === null).length,
     [data],
+  );
+  // How many of them clear the current threshold, so the label matches what
+  // ticking the box actually reveals.
+  const variantOnlyVisible = useMemo(
+    () =>
+      (data?.pairs ?? []).filter(
+        (p) => p.score === null && p.best_bridge.score >= minScore,
+      ).length,
+    [data, minScore],
   );
 
   const visible = useMemo(
@@ -246,8 +263,8 @@ export function NetworkPanel({ jobId }: Props) {
               onChange={(e) => setIncludeVariantOnly(e.target.checked)}
             />
             <span>
-              Show {variantOnlyCount} pair{variantOnlyCount === 1 ? "" : "s"} bridged only
-              by variants
+              Show {variantOnlyVisible} pair{variantOnlyVisible === 1 ? "" : "s"} bridged
+              only by variants
             </span>
           </label>
         ) : null}
@@ -405,7 +422,8 @@ export function NetworkPanel({ jobId }: Props) {
               The score shown for a pair is the <strong>wild-type</strong> miRNA&apos;s: a
               pair-level score is a claim about the real miRNA, so a variant never sets it.
               Where a variant scores higher it appears under <strong>Best bridge</strong>,
-              and a pair the wild type does not bridge at all shows no score. Correlations
+              and a pair the wild type does not bridge at all shows no score — the minimum
+              score above then filters it on its best bridge instead. Correlations
               are measured on the wild type and inherited by its variants, so within one
               pair they are constant — wild-type-vs-variant differences come entirely from
               tool support.
