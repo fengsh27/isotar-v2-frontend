@@ -274,8 +274,8 @@ app/
 components/
   wizard/         → shared single-miRNA steps
   wizard-network/ → mir-network steps (incl. NetworkVariantsSection)
-  job/            → job-detail views (NetworkGraph, tables, Venn/UpSet, …)
-lib/              → API client, domain helpers, constants, types
+  job/            → job-detail views (NetworkGraph, VerificationPanel, tables, Venn/UpSet, …)
+lib/              → API client, domain helpers, constants, types (verification.ts: literature helpers)
 stores/           → the two Zustand wizard stores
 data/             → per-species miRNA catalogs (JSON)
 ```
@@ -393,12 +393,58 @@ workflow-dependent:
 * `mir-network` → `NetworkPanel` / `NetworkGraph` (Cytoscape + klay) only, no
   tabs. Filtering is by **ceRNA score**, not by edge tool count: the score
   already folds in tool agreement on both sides, so a separate consensus-k
-  threshold would leave the graph disagreeing with the scores in the table
+  threshold would leave the graph disagreeing with the scores in the table.
+  Below the pair table sits `VerificationPanel` (see *Literature verification*
+  below)
 * otherwise → a **Predicted Targets** tab (`PredictedGenesTable`, plus
   `VennDiagram` / `UpSetPlot` / `ConsensusHistogram` when the backend returns
   `venn`), and an **Enrichment** tab only when `enrichmentOrganismForGenome`
   resolves and the workflow is not `mir-lncrna` (lncRNA targets have no
   gene-symbol identity)
+
+### Literature verification (mir-network only)
+
+A succeeded network job can be checked against PubMed through the backend's
+`/api/v1/jobs/<id>/verification` endpoints (`lib/api.ts`:
+`getVerificationConfig`, `runVerification`, `getVerification`,
+`getVerificationDownloadUrl`; types under *Literature verification* in
+`lib/types.ts`; helpers in `lib/verification.ts`). `VerificationPanel` owns the
+whole lifecycle — config discovery, the run dialog, polling every 3 s while
+`queued`/`running`, the triplet table and the per-triplet detail modal — and
+reports a succeeded result upward through `onResult`, which `NetworkPanel` uses
+for the **Literature** column of the pair table and the highlighted bridges of
+the graph. Rules:
+
+* **Show only what the deployment can do.** `GET /api/v1/verification/config`
+  says whether the feature is enabled (NCBI key present), whether model review
+  is available (gateway configured), and which genomes and tissue presets are
+  accepted. The run button is hidden when disabled or the job's genome is not
+  listed; the model-review checkbox is disabled, with the reason, when no
+  gateway exists. Never hard-code the tissue list — it comes from the config.
+  In the compose deployment those secrets (`NCBI_API_KEY`, `NCBI_EMAIL`,
+  `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`) reach the backend through the
+  git-ignored `.env` next to `docker-compose.yml` (`env_file:`, optional;
+  start from the tracked `.env.template`). Never read them in the frontend.
+* **One triplet = one pair × one bridge miRNA**, keyed to the network by
+  `gene_id` (RefSeq), `mirna_node` (miRNA node id, variants included) and
+  `lncrna_id` (Ensembl transcript) — `pairKey` / `tripletKey` in
+  `lib/verification.ts`. Row ids are the rank; the JSON carries them as numbers
+  and the verdict rows as strings, so always compare through `tripletId()`.
+  Other row fields are mixed the same way (`arms_supported`, `same_paper_hit`,
+  scores, `bridge_is_variant`) — go through the helpers, not raw comparisons.
+* **Tiers are disease context, not strength.** Arm tier 1 = both symbols with
+  the tissue's cancer terms, 2 = with any cancer term, 3 = symbols alone,
+  `none`, or `unsearchable` when the lncRNA has no HGNC symbol (its Ensembl id
+  never appears in abstracts — unknown, never "unsupported"). `triplet_tier` is
+  the worst arm when all three hit, else `partial`/`none`. Only `same_paper_hit`
+  points at one record naming the whole axis, and only a model verdict of
+  `reported_interaction` with its quoted sentence says the paper reports it.
+  Keep the "How to read" box in the panel consistent with the backend README.
+* **The graph highlights, it does not filter.** `supportedEdgeIds` marks the
+  bridges with a same-paper record or a reported-interaction verdict; the score
+  slider stays the only filter so the drawn graph still agrees with the table.
+* Polling goes through the normal rewrite proxy (each call is quick); the
+  TSV download is a same-origin link like the result zip.
 
 Two result-rendering details that are easy to break:
 

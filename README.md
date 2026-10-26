@@ -70,6 +70,21 @@ Two endpoints are excluded from the proxy and served by local Route Handlers
 under `app/api/v1/jobs/[jobId]/`, because the rewrite proxy caps upstream
 requests at 30 s: `…/enrichment` and `…/result/download`.
 
+### Running with Docker Compose
+
+`docker-compose.yml` starts the backend image and this frontend on one
+network. The literature verification feature on the job page needs secrets
+that the backend reads from a `.env` file next to the compose file:
+
+```bash
+cp .env.template .env   # NCBI_API_KEY, NCBI_EMAIL, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN
+docker compose up -d
+```
+
+`.env` is git-ignored and is passed only to the `backend` service. Without it
+the stack still runs; the job page then hides the "Verify against literature"
+button (no NCBI key) or disables the model-review option (no gateway token).
+
 ## Project structure
 
 ```
@@ -83,11 +98,12 @@ app/
 components/
   wizard/          shared single-miRNA wizard steps
   wizard-network/  mir-network wizard steps (including NetworkVariantsSection)
-  job/             job-detail views (NetworkGraph, tables, Venn/UpSet, …)
+  job/             job-detail views (NetworkGraph, tables, Venn/UpSet, VerificationPanel, …)
 stores/
   wizardStore.ts        single-miRNA wizard state (mir-target, mir-lncrna)
   networkWizardStore.ts mir-network wizard state (incl. per-miRNA variants)
 lib/                    shared domain helpers, API client, types
+                        (verification.ts: literature-verification helpers)
 data/                   per-species miRNA catalogs, code-split by species
 ```
 

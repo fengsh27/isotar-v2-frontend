@@ -62,7 +62,7 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
       </div>
 
       {isNetwork ? (
-        <NetworkPanel jobId={jobId} />
+        <NetworkPanel jobId={jobId} genome={genome} />
       ) : (
       <Tabs aria-label="Result sections" variant="underlined">
         <Tab key="targets" title="Predicted Targets">
