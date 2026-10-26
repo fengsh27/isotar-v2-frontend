@@ -436,6 +436,9 @@ export interface VerificationRow {
    *  `""` when the triplet could not be searched for one. */
   same_paper_hit: number | string;
   same_paper_url: string;
+  /** `n=<count>; <year> <journal>: <title>` of the same-paper record, like the
+   *  arm notes. Absent in results produced before the column was added. */
+  same_paper_note?: string;
   mir_gene_pair: string;
   mir_gene_tier: ArmTier;
   mir_gene_url: string;

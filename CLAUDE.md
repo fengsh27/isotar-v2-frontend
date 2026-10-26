@@ -432,6 +432,12 @@ the graph. Rules:
   and the verdict rows as strings, so always compare through `tripletId()`.
   Other row fields are mixed the same way (`arms_supported`, `same_paper_hit`,
   scores, `bridge_is_variant`) — go through the helpers, not raw comparisons.
+  Every `<arm>_note` (and the optional `same_paper_note`, missing from results
+  made before it existed) is `n=<count>; <year> <journal>: <title>` of the
+  first record — `parseNote()` splits it. The table shows these citations by
+  default in a second row per triplet (`LiteratureRow`, "Show citations"
+  toggle) so the chip columns stay narrow: one representative record per
+  search plus the papers the model read, never the full hit list.
 * **Tiers are disease context, not strength.** Arm tier 1 = both symbols with
   the tissue's cancer terms, 2 = with any cancer term, 3 = symbols alone,
   `none`, or `unsearchable` when the lncRNA has no HGNC symbol (its Ensembl id

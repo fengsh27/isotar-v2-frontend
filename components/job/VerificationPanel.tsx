@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import {
   Alert,
   Button,
@@ -411,6 +412,7 @@ function ResultView({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
   const [detailId, setDetailId] = useState("");
+  const [showCitations, setShowCitations] = useState(true);
 
   const verdicts = useMemo(() => verdictsByTriplet(result), [result]);
   const summary = result.summary;
@@ -513,6 +515,15 @@ function ResultView({
           placeholder="Filter by miRNA, gene or lncRNA"
           className="w-56 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-800 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
         />
+        <label className="flex items-center gap-1.5 text-xs text-zinc-600">
+          <input
+            type="checkbox"
+            checked={showCitations}
+            onChange={(e) => setShowCitations(e.target.checked)}
+            className="accent-teal-700"
+          />
+          Show citations
+        </label>
         <span className="text-xs text-zinc-500">
           {rows.length} of {result.rows.length} triplets
         </span>
@@ -538,10 +549,10 @@ function ResultView({
           </thead>
           <tbody>
             {visible.map((row) => (
+              <Fragment key={tripletId(row)}>
               <tr
-                key={tripletId(row)}
                 onClick={() => setDetailId(tripletId(row))}
-                className="cursor-pointer border-b border-zinc-100 align-top hover:bg-zinc-50/70"
+                className={`cursor-pointer align-top hover:bg-zinc-50/70 ${showCitations ? "" : "border-b border-zinc-100"}`}
               >
                 <td className="px-3 py-2 text-right font-mono text-xs text-zinc-500">
                   {tripletId(row)}
@@ -574,6 +585,7 @@ function ResultView({
                       href={row.same_paper_url}
                       target="_blank"
                       rel="noreferrer"
+                      title={parseNote(row.same_paper_note ?? "").citation || undefined}
                       onClick={(e) => e.stopPropagation()}
                       className="font-mono text-xs text-teal-700 underline decoration-dotted"
                     >
@@ -587,6 +599,14 @@ function ResultView({
                   <VerdictChips verdicts={verdicts.get(tripletId(row)) ?? []} />
                 </td>
               </tr>
+              {showCitations ? (
+                <LiteratureRow
+                  row={row}
+                  verdicts={verdicts.get(tripletId(row)) ?? []}
+                  onClick={() => setDetailId(tripletId(row))}
+                />
+              ) : null}
+              </Fragment>
             ))}
             {visible.length === 0 ? (
               <tr>
@@ -754,6 +774,110 @@ function VerdictChips({ verdicts }: { verdicts: VerificationVerdict[] }) {
   );
 }
 
+/** One citation: `<year> <journal>: <title>` linking to PubMed, falling back
+ *  to the PMID when the note carries no title. */
+function CitationLink({ url, note }: { url: string; note: string }) {
+  const { citation } = parseNote(note);
+  const text = citation.trim() || `PMID ${pmidOf(url)}`;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      title={text}
+      onClick={(e) => e.stopPropagation()}
+      className="text-zinc-700 hover:text-teal-700 hover:underline"
+    >
+      {text}
+    </a>
+  );
+}
+
+/** Second table row of a triplet: the representative record of each arm
+ *  search, the same-paper record and the papers the model read, spanning the
+ *  full width so the chip columns above stay narrow. */
+function LiteratureRow({
+  row,
+  verdicts,
+  onClick,
+}: {
+  row: VerificationRow;
+  verdicts: VerificationVerdict[];
+  onClick: () => void;
+}) {
+  const items: { key: string; label: string; node: ReactNode }[] = [];
+  for (const a of ARMS) {
+    const url = row[`${a.key}_url`];
+    if (!url) continue;
+    const { count } = parseNote(row[`${a.key}_note`]);
+    items.push({
+      key: a.key,
+      label: a.label,
+      node: (
+        <>
+          <CitationLink url={url} note={row[`${a.key}_note`]} />
+          {count !== null && count > 1 ? (
+            <span className="text-zinc-400"> (+{count - 1} more)</span>
+          ) : null}
+        </>
+      ),
+    });
+  }
+  if (isSamePaperHit(row)) {
+    items.push({
+      key: "same_paper",
+      label: "Same paper",
+      node: <CitationLink url={row.same_paper_url} note={row.same_paper_note ?? ""} />,
+    });
+  }
+  const seen = new Set<string>();
+  for (const v of verdicts) {
+    const k = `${v.pmid}:${v.verdict}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    items.push({
+      key: `verdict-${k}`,
+      label: "Model read",
+      node: (
+        <span title={v.sentences || undefined}>
+          <a
+            href={pubmedUrl(v.pmid)}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="font-mono text-teal-700 underline decoration-dotted"
+          >
+            PMID {v.pmid}
+          </a>
+          <span className="text-zinc-500">
+            {" "}
+            → {VERDICT_LABELS[v.verdict] ?? v.verdict}
+            {v.tissue ? ` in ${v.tissue}` : ""}
+          </span>
+        </span>
+      ),
+    });
+  }
+  return (
+    <tr onClick={onClick} className="cursor-pointer border-b border-zinc-100 bg-zinc-50/40">
+      <td colSpan={10} className="px-3 pb-2 pt-0 text-[11px] leading-snug">
+        {items.length === 0 ? (
+          <span className="text-zinc-400">No PubMed record for any arm.</span>
+        ) : (
+          <ul className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-x-5">
+            {items.map((it) => (
+              <li key={it.key} className="min-w-0 max-w-[32rem]">
+                <span className="text-zinc-500">{it.label}: </span>
+                {it.node}
+              </li>
+            ))}
+          </ul>
+        )}
+      </td>
+    </tr>
+  );
+}
+
 function TripletDetail({
   row,
   verdicts,
@@ -818,6 +942,9 @@ function TripletDetail({
             >
               PMID {pmidOf(row.same_paper_url)}
             </a>
+            {parseNote(row.same_paper_note ?? "").citation
+              ? ` (${parseNote(row.same_paper_note ?? "").citation})`
+              : ""}
             . Only a model verdict with its quoted sentence says whether it reports the axis.
           </p>
         ) : (
@@ -911,8 +1038,10 @@ function HowToRead({
         appears in abstracts, so those arms are unknown, not unsupported.
       </p>
       <p className="mt-1.5">
-        <strong>Same paper</strong> is the only column pointing at a single record that names
-        the whole axis. Even then, only a model verdict of{" "}
+        The line under each triplet cites the first record PubMed returned for each search
+        (year, journal, title) and the papers the model read; the other matching records are
+        one click away on PubMed. <strong>Same paper</strong> is the only column pointing at a
+        single record that names the whole axis. Even then, only a model verdict of{" "}
         <strong>reported interaction</strong>, with its quoted sentence, says the paper reports
         it; <strong>co-mention</strong> and <strong>look-alike</strong> hits are the common
         false positives of keyword search.
