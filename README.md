@@ -83,11 +83,12 @@ app/
 components/
   wizard/          shared single-miRNA wizard steps
   wizard-network/  mir-network wizard steps (including NetworkVariantsSection)
-  job/             job-detail views (NetworkGraph, tables, Venn/UpSet, …)
+  job/             job-detail views (NetworkGraph, tables, Venn/UpSet, VerificationPanel, …)
 stores/
   wizardStore.ts        single-miRNA wizard state (mir-target, mir-lncrna)
   networkWizardStore.ts mir-network wizard state (incl. per-miRNA variants)
 lib/                    shared domain helpers, API client, types
+                        (verification.ts: literature-verification helpers)
 data/                   per-species miRNA catalogs, code-split by species
 ```
 

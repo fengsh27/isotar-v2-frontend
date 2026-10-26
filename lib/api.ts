@@ -12,6 +12,10 @@ import type {
   MirnaValidationResponse,
   NetworkResponse,
   TargetValidationResponse,
+  VerificationConfig,
+  VerificationParams,
+  VerificationStartResponse,
+  VerificationStatus,
 } from "@/lib/types";
 
 // When empty the browser sends relative requests (e.g. /api/v1/jobs), which are
@@ -47,18 +51,28 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const data = raw ? (JSON.parse(raw) as unknown) : null;
 
   if (!response.ok) {
-    const message =
-      typeof data === "object" &&
-      data !== null &&
-      "message" in data &&
-      typeof (data as { message?: unknown }).message === "string"
-        ? (data as { message: string }).message
-        : `Request failed (${response.status})`;
-
-    throw new ApiError(message, response.status);
+    throw new ApiError(errorMessage(data, response.status), response.status);
   }
 
   return data as T;
+}
+
+/** The backend reports failures as `{error, hint?}` (a few older endpoints as
+ *  `{message}`); fold them into one readable line. */
+function errorMessage(data: unknown, status: number): string {
+  if (typeof data === "object" && data !== null) {
+    const rec = data as { error?: unknown; message?: unknown; hint?: unknown };
+    const main =
+      typeof rec.error === "string"
+        ? rec.error
+        : typeof rec.message === "string"
+          ? rec.message
+          : null;
+    if (main) {
+      return typeof rec.hint === "string" ? `${main} (${rec.hint})` : main;
+    }
+  }
+  return `Request failed (${status})`;
 }
 
 export async function validateMiRNA(
@@ -158,15 +172,7 @@ export async function getJobResult(jobId: string): Promise<Blob> {
     const text = await response.text();
     let message = `Request failed (${response.status})`;
     try {
-      const data = JSON.parse(text) as unknown;
-      if (
-        typeof data === "object" &&
-        data !== null &&
-        "message" in data &&
-        typeof (data as { message?: unknown }).message === "string"
-      ) {
-        message = (data as { message: string }).message;
-      }
+      message = errorMessage(JSON.parse(text) as unknown, response.status);
     } catch {
       // non-JSON error body
     }
@@ -201,6 +207,34 @@ export function getEnrichmentDotplotUrl(jobId: string): string {
   // next.config.ts proxy this to the backend server-side, so we deliberately
   // skip NEXT_PUBLIC_API_BASE here.
   return `/api/v1/jobs/${encodeURIComponent(jobId)}/enrichment/dotplot`;
+}
+
+export async function getVerificationConfig(): Promise<VerificationConfig> {
+  return fetchJson<VerificationConfig>("/api/v1/verification/config");
+}
+
+export async function runVerification(
+  jobId: string,
+  params: VerificationParams,
+): Promise<VerificationStartResponse> {
+  return fetchJson<VerificationStartResponse>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/verification`,
+    { method: "POST", body: JSON.stringify(params) },
+  );
+}
+
+/** Progress record plus, once succeeded, the full result. Throws an ApiError
+ *  with status 404 while no verification has been started for the job. */
+export async function getVerification(jobId: string): Promise<VerificationStatus> {
+  return fetchJson<VerificationStatus>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/verification`,
+  );
+}
+
+export function getVerificationDownloadUrl(jobId: string): string {
+  // Same-origin for the same reason as the result zip: a download on an HTTPS
+  // page from an HTTP backend is blocked as mixed content.
+  return `/api/v1/jobs/${encodeURIComponent(jobId)}/verification/download`;
 }
 
 export { ApiError };

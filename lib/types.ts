@@ -358,3 +358,208 @@ export interface JobRecord {
   shift?: string | null;
   pre_id?: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Literature verification (mir-network jobs) — `/api/v1/jobs/<id>/verification`
+// ---------------------------------------------------------------------------
+
+/** What the deployment can do, from `GET /api/v1/verification/config`. */
+export interface VerificationConfig {
+  /** False until the backend has an NCBI API key; POST then returns 503. */
+  enabled: boolean;
+  /** False until an Anthropic-compatible gateway is configured on the backend. */
+  llm_review_available: boolean;
+  /** Model name as the gateway exposes it; null when review is unavailable. */
+  model: string | null;
+  /** Tissue presets accepted by `tissue` (besides `none` and a raw boolean). */
+  tissues: string[];
+  /** Genomes a verification may run on (the search terms are human). */
+  genomes: string[];
+  /** Top-ranked triplets searched per job. */
+  max_triplets: number;
+  /** Papers the model reads per job (cached verdicts are not counted). */
+  max_papers: number;
+}
+
+export interface VerificationParams {
+  /** A preset name, `none` (tier 1 skipped) or a raw PubMed boolean with
+   *  `[tiab]`/`[mh]` fields. Default `lung`. */
+  tissue: string;
+  llm_review: boolean;
+}
+
+export interface VerificationStartResponse {
+  job_id: string;
+  status: "queued";
+  task_id: string;
+  params: VerificationParams;
+}
+
+export type VerificationStatusValue = "queued" | "running" | "succeeded" | "failed";
+
+export type VerificationStep =
+  | "queued"
+  | "triplets"
+  | "search_arms"
+  | "same_paper"
+  | "summaries"
+  | "rollup"
+  | "review"
+  | "done"
+  | "failed";
+
+/** Evidence tier of one arm. `"1"` tissue cancer terms, `"2"` any cancer term,
+ *  `"3"` the two symbols only, `none` no record, `unsearchable` when the lncRNA
+ *  has no HGNC symbol. A lower number records disease context, not stronger
+ *  evidence. */
+export type ArmTier = "1" | "2" | "3" | "none" | "unsearchable";
+
+/** Roll-up of the three arms: `tier{worst arm}` when all three hit, `partial`
+ *  with one or two, `none` otherwise. */
+export type TripletTier = "tier1" | "tier2" | "tier3" | "partial" | "none";
+
+export type VerificationArm = "mir_gene" | "mir_lnc" | "gene_lnc";
+
+/** One triplet (pair × bridge miRNA) of the verification table. The arm
+ *  fields are flattened as `<arm>_pair|tier|url|note` in the backend TSV and
+ *  JSON alike; `pmid` columns are not sent, the `url` carries it. Numeric
+ *  fields arrive as strings because the TSV is the source of the JSON rows. */
+export interface VerificationRow {
+  /** Rank, 1-based. A number in the JSON result, a string in verdict rows. */
+  id: number | string;
+  miRNA: string;
+  gene: string;
+  lncRNA: string;
+  triplet_tier: TripletTier;
+  arms_supported: number | string;
+  /** `1` when one PubMed record names all three symbols, `0` when none does,
+   *  `""` when the triplet could not be searched for one. */
+  same_paper_hit: number | string;
+  same_paper_url: string;
+  mir_gene_pair: string;
+  mir_gene_tier: ArmTier;
+  mir_gene_url: string;
+  /** `n=<count>; <year> <journal>: <title>` of the representative record. */
+  mir_gene_note: string;
+  mir_lnc_pair: string;
+  mir_lnc_tier: ArmTier;
+  mir_lnc_url: string;
+  mir_lnc_note: string;
+  gene_lnc_pair: string;
+  gene_lnc_tier: ArmTier;
+  gene_lnc_url: string;
+  gene_lnc_note: string;
+  /** RefSeq id of the gene node, matching `NetworkPair.gene`. */
+  gene_id: string;
+  /** Ensembl transcript id of the lncRNA node, matching `NetworkPair.lncrna`. */
+  lncrna_id: string;
+  /** miRNA node id, matching `NetworkPairBridge.mirna`. */
+  mirna_node: string;
+  /** `""` when WT does not bridge the pair. */
+  pair_score: number | string;
+  bridge_score: number | string;
+  bridge_is_variant: boolean | string;
+}
+
+export interface VerificationSummary {
+  triplets: number;
+  with_any_arm: number;
+  with_two_arms: number;
+  with_three_arms: number;
+  same_paper_hits: number;
+  unsearchable_lncrna: number;
+  triplet_tier: Partial<Record<TripletTier, number>>;
+  /** True when more triplets existed than `max_triplets`. */
+  truncated: boolean;
+  max_triplets: number;
+}
+
+export type VerificationQueueReason =
+  | "same_paper"
+  | "three_arms"
+  | "two_arms_tissue"
+  | "two_arms_experimental";
+
+/** One triplet handed to the model, with the records it should read. */
+export interface VerificationQueueItem {
+  id: number | string;
+  miRNA: string;
+  gene: string;
+  lncRNA: string;
+  reason: VerificationQueueReason;
+  arms_supported: number | string;
+  triplet_tier: TripletTier;
+  /** `[scope, pmid]` pairs; scope is `same_paper` or an arm name. */
+  pmids: [string, string][];
+  terms: string[];
+}
+
+export type VerdictValue =
+  | "reported_interaction"
+  | "opposite_arm"
+  | "co_mention"
+  | "look_alike"
+  | "editorial_notice"
+  | "not_accessible";
+
+export interface VerificationVerdict {
+  /** Triplet id (rank) the verdict belongs to; compare via `String()`. */
+  id: number | string;
+  /** `same_paper` or the arm the record was found for. */
+  scope: string;
+  pmid: string;
+  verdict: VerdictValue;
+  arm_match: "same" | "opposite" | "unstated" | "na";
+  /** Tissue or disease context the paper reports, free text. */
+  tissue: string;
+  evidence_type: "reporter" | "rip" | "expression" | "computational" | "review" | "none";
+  /** Sentences quoted verbatim from the paper that support the verdict. */
+  sentences: string;
+  note: string;
+}
+
+export interface VerificationReview {
+  status: "disabled" | "skipped" | "pending" | "succeeded" | "failed";
+  model: string | null;
+  queue_size: number;
+  reviewed: number;
+  cached: number;
+  errors: number;
+  error: string | null;
+  verdicts: VerificationVerdict[];
+}
+
+export interface VerificationResult {
+  query_version: number;
+  params: VerificationParams & { tissue_terms: string | null };
+  genome: string;
+  started_at: number;
+  finished_at: number;
+  summary: VerificationSummary;
+  columns: string[];
+  rows: VerificationRow[];
+  queue: VerificationQueueItem[];
+  review: VerificationReview;
+}
+
+/** `GET /api/v1/jobs/<id>/verification`: the progress record, with `result`
+ *  filled in once `status` is `succeeded`. 404 until a run was started. */
+export interface VerificationStatus {
+  job_id: string;
+  status: VerificationStatusValue;
+  step: VerificationStep;
+  params: VerificationParams;
+  task_id?: string;
+  queued_at?: number;
+  started_at?: number;
+  finished_at?: number;
+  updated_at?: number;
+  /** Distinct (arm, symbols) queries searched so far / in total. */
+  arms_done?: number;
+  arms_total?: number;
+  triplets?: number;
+  queue_total?: number;
+  reviewed?: number;
+  error: string | null;
+  result: VerificationResult | null;
+}

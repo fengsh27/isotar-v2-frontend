@@ -17,7 +17,13 @@ if (!klayRegistered) {
 interface Props {
   nodes: NetworkNode[];
   edges: NetworkEdge[];
+  /** Edge ids (`${source}__${target}__${side}`) with literature support — a
+   *  same-paper record or a model verdict of a reported interaction — drawn
+   *  in a distinct colour. See `supportedEdgeIds` in lib/verification.ts. */
+  highlightedEdges?: Set<string>;
 }
+
+const LITERATURE_COLOR = "#0d9488"; // teal-600
 
 const TYPE_COLOR: Record<string, string> = {
   gene: "#0f766e", // teal-700
@@ -80,7 +86,11 @@ function layoutFor(mode: LayoutMode): LayoutOptions {
   }
 }
 
-function buildElements(nodes: NetworkNode[], edges: NetworkEdge[]): ElementDefinition[] {
+function buildElements(
+  nodes: NetworkNode[],
+  edges: NetworkEdge[],
+  highlightedEdges?: Set<string>,
+): ElementDefinition[] {
   // Lay out each column independently, vertically centered, so the three
   // partitions read left-to-right with miRNAs bridging the middle. The preset
   // positions are also used as the tripartite-mode layout.
@@ -111,20 +121,22 @@ function buildElements(nodes: NetworkNode[], edges: NetworkEdge[]): ElementDefin
     });
   }
   for (const e of edges) {
+    const id = `${e.source}__${e.target}__${e.side}`;
     els.push({
       data: {
-        id: `${e.source}__${e.target}__${e.side}`,
+        id,
         source: e.source,
         target: e.target,
         weight: e.tool_count,
         tools: e.tools.join(", "),
+        literature: highlightedEdges?.has(id) ? 1 : 0,
       },
     });
   }
   return els;
 }
 
-export function NetworkGraph({ nodes, edges }: Props) {
+export function NetworkGraph({ nodes, edges, highlightedEdges }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cyRef = useRef<Core | null>(null);
   const [mode, setMode] = useState<LayoutMode>("tripartite");
@@ -133,7 +145,7 @@ export function NetworkGraph({ nodes, edges }: Props) {
     if (!containerRef.current) return;
     const cy = cytoscape({
       container: containerRef.current,
-      elements: buildElements(nodes, edges),
+      elements: buildElements(nodes, edges, highlightedEdges),
       layout: layoutFor("tripartite"),
       style: [
         {
@@ -183,6 +195,12 @@ export function NetworkGraph({ nodes, edges }: Props) {
           },
         },
         {
+          // Bridges with literature support (same-paper record or a reported
+          // interaction verdict) keep their consensus width but change hue.
+          selector: "edge[literature > 0]",
+          style: { "line-color": LITERATURE_COLOR, opacity: 0.95 },
+        },
+        {
           selector: "node:selected",
           style: { "border-width": 3, "border-color": "#0d9488" },
         },
@@ -196,7 +214,7 @@ export function NetworkGraph({ nodes, edges }: Props) {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [nodes, edges]);
+  }, [nodes, edges, highlightedEdges]);
 
   // Re-run the layout whenever the user switches modes (without rebuilding the
   // graph or losing the current selection).
@@ -264,6 +282,15 @@ export function NetworkGraph({ nodes, edges }: Props) {
           />
           miRNA variant
         </span>
+        {highlightedEdges && highlightedEdges.size > 0 ? (
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-0.5 w-4 rounded"
+              style={{ backgroundColor: LITERATURE_COLOR }}
+            />
+            literature support (same paper or reported interaction)
+          </span>
+        ) : null}
         <span className="text-zinc-400">Edge thickness ∝ tool consensus.</span>
       </div>
     </div>

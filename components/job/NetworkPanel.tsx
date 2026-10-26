@@ -5,15 +5,28 @@ import { Alert, Chip, Spinner } from "@heroui/react";
 
 import { getNetwork } from "@/lib/api";
 import { NetworkGraph } from "@/components/job/NetworkGraph";
+import { VerificationPanel } from "@/components/job/VerificationPanel";
 import type {
   NetworkEdge,
   NetworkNode,
   NetworkPair,
   NetworkResponse,
+  VerificationResult,
 } from "@/lib/types";
+import {
+  TRIPLET_TIER_COLOR,
+  TRIPLET_TIER_LABELS,
+  indexByPair,
+  pairKey,
+  rowsByTripletKey,
+  supportedEdgeIds,
+  tripletKey,
+} from "@/lib/verification";
 
 interface Props {
   jobId: string;
+  /** Job genome; literature verification is offered for human genomes only. */
+  genome?: string;
 }
 
 interface Visible {
@@ -112,8 +125,12 @@ function focusOnBase(visible: Visible, base: string): Visible {
   return { nodes, edges, pairs };
 }
 
-export function NetworkPanel({ jobId }: Props) {
+export function NetworkPanel({ jobId, genome }: Props) {
   const [data, setData] = useState<NetworkResponse | null>(null);
+  // Completed literature verification, if any; feeds the Literature column of
+  // the pair table and the highlighted bridges of the graph. Read-only here —
+  // the panel below owns running and polling it.
+  const [verification, setVerification] = useState<VerificationResult | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [minScore, setMinScore] = useState(0);
@@ -184,6 +201,19 @@ export function NetworkPanel({ jobId }: Props) {
   const displayed = useMemo(
     () => (visible && effectiveFocus ? focusOnBase(visible, effectiveFocus) : visible),
     [visible, effectiveFocus],
+  );
+
+  const litByPair = useMemo(
+    () => (verification ? indexByPair(verification) : null),
+    [verification],
+  );
+  const litByTriplet = useMemo(
+    () => (verification ? rowsByTripletKey(verification) : null),
+    [verification],
+  );
+  const litEdges = useMemo(
+    () => (verification ? supportedEdgeIds(verification) : undefined),
+    [verification],
   );
 
   if (loading) {
@@ -278,7 +308,11 @@ export function NetworkPanel({ jobId }: Props) {
           description="Lower the minimum ceRNA score to reveal more gene↔miRNA↔lncRNA paths."
         />
       ) : (
-        <NetworkGraph nodes={displayed.nodes} edges={displayed.edges} />
+        <NetworkGraph
+          nodes={displayed.nodes}
+          edges={displayed.edges}
+          highlightedEdges={litEdges}
+        />
       )}
 
       {/* ceRNA pair table */}
@@ -293,12 +327,14 @@ export function NetworkPanel({ jobId }: Props) {
                   <th className="px-4 py-2.5 text-right">ceRNA score</th>
                   <th className="px-4 py-2.5 text-right">Best bridge</th>
                   <th className="px-4 py-2.5 text-left">Bridging miRNAs</th>
+                  {litByPair ? <th className="px-4 py-2.5 text-left">Literature</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {displayed.pairs.map((pair) => {
                   const key = `${pair.gene}__${pair.lncrna}`;
                   const isOpen = expanded === key;
+                  const lit = litByPair?.get(pairKey(pair.gene, pair.lncrna)) ?? null;
                   return (
                     <Fragment key={key}>
                       <tr
@@ -328,10 +364,41 @@ export function NetworkPanel({ jobId }: Props) {
                         <td className="px-4 py-2 text-zinc-700">
                           {pair.bridge_mirnas.length}
                         </td>
+                        {litByPair ? (
+                          <td className="px-4 py-2">
+                            {lit ? (
+                              <div className="flex flex-wrap items-center gap-1">
+                                <Chip
+                                  size="sm"
+                                  variant="flat"
+                                  color={TRIPLET_TIER_COLOR[lit.bestTier]}
+                                >
+                                  {TRIPLET_TIER_LABELS[lit.bestTier]}
+                                </Chip>
+                                {lit.samePaper ? (
+                                  <span className="text-[10px] font-medium text-teal-700">
+                                    same paper
+                                  </span>
+                                ) : null}
+                                {lit.reported ? (
+                                  <span className="text-[10px] font-medium text-emerald-700">
+                                    reported
+                                  </span>
+                                ) : lit.oppositeArm ? (
+                                  <span className="text-[10px] font-medium text-amber-700">
+                                    opposite arm
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-zinc-400">not searched</span>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                       {isOpen ? (
                         <tr className="border-b border-zinc-100 bg-zinc-50/60">
-                          <td colSpan={5} className="px-4 py-3">
+                          <td colSpan={litByPair ? 6 : 5} className="px-4 py-3">
                             <div className="grid gap-3 md:grid-cols-2">
                               <div>
                                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -364,10 +431,17 @@ export function NetworkPanel({ jobId }: Props) {
                                       <th className="py-0.5 text-right font-medium">gene</th>
                                       <th className="py-0.5 text-right font-medium">lncRNA</th>
                                       <th className="py-0.5 text-right font-medium">score</th>
+                                      {litByTriplet ? (
+                                        <th className="py-0.5 text-left font-medium">literature</th>
+                                      ) : null}
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {pair.bridges.map((bridge) => (
+                                    {pair.bridges.map((bridge) => {
+                                      const row = litByTriplet?.get(
+                                        tripletKey(pair.gene, bridge.mirna, pair.lncrna),
+                                      );
+                                      return (
                                       <tr key={bridge.mirna}>
                                         <td className="py-0.5 font-mono">
                                           {bridge.mirna}
@@ -387,8 +461,20 @@ export function NetworkPanel({ jobId }: Props) {
                                         <td className="py-0.5 text-right font-mono">
                                           {bridge.score.toFixed(3)}
                                         </td>
+                                        {litByTriplet ? (
+                                          <td className="py-0.5 pl-2">
+                                            {row ? (
+                                              <span className="text-zinc-700">
+                                                {TRIPLET_TIER_LABELS[row.triplet_tier]} (#{String(row.id)})
+                                              </span>
+                                            ) : (
+                                              <span className="text-zinc-400">—</span>
+                                            )}
+                                          </td>
+                                        ) : null}
                                       </tr>
-                                    ))}
+                                      );
+                                    })}
                                   </tbody>
                                 </table>
                               </div>
@@ -431,6 +517,8 @@ export function NetworkPanel({ jobId }: Props) {
           </div>
         </div>
       ) : null}
+
+      <VerificationPanel jobId={jobId} genome={genome} onResult={setVerification} />
     </div>
   );
 }
