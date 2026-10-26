@@ -1,6 +1,6 @@
 services:
   backend:
-    image: frankfeng78/isotar-v2:0.3.1
+    image: frankfeng78/isotar-v2:0.3.26.1
     container_name: isotar-v2-backend
     # nginx (8080) inside the container fronts gunicorn workers and routes
     # /api/v1/* to the v1 app and /mirna/* to the legacy app.
@@ -20,7 +20,26 @@ services:
       - ISOTAR_MAX_CORES_PER_JOB=8
       - ISOTAR_DEFAULT_CORES=8
       - ISOTAR_MAX_CONCURRENT_JOBS=4
+    # Secrets for the literature verification feature come from a `.env` file
+    # next to this compose file (git-ignored; start from `.env.template`):
+    #   NCBI_API_KEY, NCBI_EMAIL           -- PubMed E-utilities; without the
+    #                                         key the verification endpoints
+    #                                         answer 503 and the UI hides the
+    #                                         "Verify against literature" button.
+    #   ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, ISOTAR_VERIFICATION_MODEL
+    #                                      -- LiteLLM gateway for the model
+    #                                         review step; without a token the
+    #                                         review checkbox is disabled.
+    # `required: false` lets `docker compose up` run without the file (the
+    # feature is then simply off). Keys set under `environment:` above take
+    # precedence over the same keys in `.env`.
+    env_file:
+      - path: .env
+        required: false
     volumes:
+      # Jobs, logs and the verification caches (PubMed answers and model
+      # verdicts under /opt/out/verification) all live on this mount, so they
+      # survive container restarts and image upgrades.
       - /data/isotar/out:/opt/out/
     # Hard ceiling on CPU usage for all jobs combined. Safety net regardless
     # of how many concurrent jobs the celery worker picks up. Adjust to your
@@ -38,7 +57,7 @@ services:
         # Baked into routes-manifest.json at build time; must match the
         # docker-network address of the backend service.
         API_BASE: http://backend:8080
-    image: frankfeng78/isotar-v2-frontend:0.1.14
+    image: frankfeng78/isotar-v2-frontend:0.2.1
     container_name: isotar-v2-frontend
     ports:
       - "9501:3000"

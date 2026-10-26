@@ -421,6 +421,10 @@ the graph. Rules:
   accepted. The run button is hidden when disabled or the job's genome is not
   listed; the model-review checkbox is disabled, with the reason, when no
   gateway exists. Never hard-code the tissue list — it comes from the config.
+  In the compose deployment those secrets (`NCBI_API_KEY`, `NCBI_EMAIL`,
+  `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`) reach the backend through the
+  git-ignored `.env` next to `docker-compose.yml` (`env_file:`, optional;
+  start from the tracked `.env.template`). Never read them in the frontend.
 * **One triplet = one pair × one bridge miRNA**, keyed to the network by
   `gene_id` (RefSeq), `mirna_node` (miRNA node id, variants included) and
   `lncrna_id` (Ensembl transcript) — `pairKey` / `tripletKey` in
