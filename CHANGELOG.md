@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.2](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.1...v0.2.2) (2026-10-26)
+
+
+### Features
+
+* **network:** literature verification panel for mir-network jobs ([fa6339c](https://github.com/fengsh27/isotar-v2-frontend/commit/fa6339c1be89670c4f797e1ea15fb951620f551c))
+
 ### [0.2.1](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.0...v0.2.1) (2026-10-15)
 
 
