@@ -581,16 +581,15 @@ function ResultView({
                 ))}
                 <td className="px-3 py-2">
                   {isSamePaperHit(row) ? (
-                    <a
-                      href={row.same_paper_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={parseNote(row.same_paper_note ?? "").citation || undefined}
-                      onClick={(e) => e.stopPropagation()}
-                      className="font-mono text-xs text-teal-700 underline decoration-dotted"
-                    >
-                      PMID {pmidOf(row.same_paper_url)}
-                    </a>
+                    <span className="text-xs">
+                      <ExternalLink
+                        href={row.same_paper_url}
+                        title={parseNote(row.same_paper_note ?? "").citation || undefined}
+                        mono
+                      >
+                        PMID {pmidOf(row.same_paper_url)}
+                      </ExternalLink>
+                    </span>
                   ) : (
                     <span className="text-xs text-zinc-400">—</span>
                   )}
@@ -745,15 +744,25 @@ function ArmCell({ tier, url, note }: { tier: ArmTier; url: string; note: string
     <a
       href={url}
       target="_blank"
-      rel="noreferrer"
-      title={citation}
+      rel="noopener noreferrer"
+      title={citation ? `Open in PubMed: ${citation}` : "Open in PubMed"}
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex items-center gap-1"
+      className="group inline-flex items-center gap-1 rounded-full text-teal-700 hover:text-teal-900"
     >
-      <Chip size="sm" variant="flat" color={ARM_TIER_COLOR[tier]}>
+      <Chip
+        size="sm"
+        variant="flat"
+        color={ARM_TIER_COLOR[tier]}
+        className="transition group-hover:ring-1 group-hover:ring-teal-600"
+      >
         {ARM_TIER_LABELS[tier]}
       </Chip>
-      {count !== null ? <span className="text-[11px] text-zinc-500">n={count}</span> : null}
+      {count !== null ? (
+        <span className="text-[11px] font-medium underline decoration-teal-700/40 underline-offset-2 group-hover:decoration-teal-900">
+          n={count}
+        </span>
+      ) : null}
+      <ExternalLinkIcon />
     </a>
   );
 }
@@ -774,22 +783,61 @@ function VerdictChips({ verdicts }: { verdicts: VerificationVerdict[] }) {
   );
 }
 
+function ExternalLinkIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="ml-0.5 inline-block h-3 w-3 shrink-0 align-[-1px]"
+    >
+      <path d="M9 3h4v4M13 3 7 9M11 9.5V13H3V5h3.5" />
+    </svg>
+  );
+}
+
+/** A PubMed link that reads as a link: teal, underlined and marked with an
+ *  external-link icon. Stops propagation so clicking it inside a table row
+ *  opens the paper instead of the triplet detail modal. */
+function ExternalLink({
+  href,
+  title,
+  mono = false,
+  children,
+}: {
+  href: string;
+  title?: string;
+  mono?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={title}
+      onClick={(e) => e.stopPropagation()}
+      className={`font-medium text-teal-700 underline decoration-teal-700/40 underline-offset-2 hover:text-teal-900 hover:decoration-teal-900 ${mono ? "font-mono" : ""}`}
+    >
+      {children}
+      <ExternalLinkIcon />
+    </a>
+  );
+}
+
 /** One citation: `<year> <journal>: <title>` linking to PubMed, falling back
  *  to the PMID when the note carries no title. */
 function CitationLink({ url, note }: { url: string; note: string }) {
   const { citation } = parseNote(note);
   const text = citation.trim() || `PMID ${pmidOf(url)}`;
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      title={text}
-      onClick={(e) => e.stopPropagation()}
-      className="text-zinc-700 hover:text-teal-700 hover:underline"
-    >
+    <ExternalLink href={url} title={`Open in PubMed: ${text}`}>
       {text}
-    </a>
+    </ExternalLink>
   );
 }
 
@@ -840,15 +888,9 @@ function LiteratureRow({
       label: "Model read",
       node: (
         <span title={v.sentences || undefined}>
-          <a
-            href={pubmedUrl(v.pmid)}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="font-mono text-teal-700 underline decoration-dotted"
-          >
+          <ExternalLink href={pubmedUrl(v.pmid)} mono>
             PMID {v.pmid}
-          </a>
+          </ExternalLink>
           <span className="text-zinc-500">
             {" "}
             → {VERDICT_LABELS[v.verdict] ?? v.verdict}
@@ -860,7 +902,7 @@ function LiteratureRow({
   }
   return (
     <tr onClick={onClick} className="cursor-pointer border-b border-zinc-100 bg-zinc-50/40">
-      <td colSpan={10} className="px-3 pb-2 pt-0 text-[11px] leading-snug">
+      <td colSpan={10} className="px-3 pb-2 pt-0 text-xs leading-snug">
         {items.length === 0 ? (
           <span className="text-zinc-400">No PubMed record for any arm.</span>
         ) : (
@@ -907,14 +949,7 @@ function TripletDetail({
                 {url ? (
                   <span className="text-xs text-zinc-600">
                     {count !== null ? `${count} record${count === 1 ? "" : "s"}; ` : ""}
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-teal-700 underline decoration-dotted"
-                    >
-                      {citation || `PMID ${pmidOf(url)}`}
-                    </a>
+                    <ExternalLink href={url}>{citation || `PMID ${pmidOf(url)}`}</ExternalLink>
                   </span>
                 ) : tier === "unsearchable" ? (
                   <span className="text-xs text-zinc-500">
@@ -934,14 +969,9 @@ function TripletDetail({
         {isSamePaperHit(row) ? (
           <p className="text-zinc-700">
             One record names all three symbols:{" "}
-            <a
-              href={row.same_paper_url}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-teal-700 underline decoration-dotted"
-            >
+            <ExternalLink href={row.same_paper_url} mono>
               PMID {pmidOf(row.same_paper_url)}
-            </a>
+            </ExternalLink>
             {parseNote(row.same_paper_note ?? "").citation
               ? ` (${parseNote(row.same_paper_note ?? "").citation})`
               : ""}
@@ -969,14 +999,11 @@ function TripletDetail({
                   <Chip size="sm" variant="flat" color={VERDICT_COLOR[v.verdict] ?? "default"}>
                     {VERDICT_LABELS[v.verdict] ?? v.verdict}
                   </Chip>
-                  <a
-                    href={pubmedUrl(v.pmid)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-mono text-xs text-teal-700 underline decoration-dotted"
-                  >
-                    PMID {v.pmid}
-                  </a>
+                  <span className="text-xs">
+                    <ExternalLink href={pubmedUrl(v.pmid)} mono>
+                      PMID {v.pmid}
+                    </ExternalLink>
+                  </span>
                   <span className="text-xs text-zinc-500">
                     found for {ARM_LABELS[v.scope] ?? v.scope.replace(/_/g, " ")}
                   </span>

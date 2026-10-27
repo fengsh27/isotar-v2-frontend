@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.3](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.2...v0.2.3) (2026-10-27)
+
+
+### Features
+
+* **network:** cite the literature under each verified triplet ([3576525](https://github.com/fengsh27/isotar-v2-frontend/commit/3576525cf770beaef149076d8180263c41a883e7))
+
 ### [0.2.2](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.1...v0.2.2) (2026-10-26)
 
 
