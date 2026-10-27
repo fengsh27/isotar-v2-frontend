@@ -758,7 +758,7 @@ function ArmCell({ tier, url, note }: { tier: ArmTier; url: string; note: string
         {ARM_TIER_LABELS[tier]}
       </Chip>
       {count !== null ? (
-        <span className="text-[11px] font-medium underline decoration-teal-700/40 underline-offset-2 group-hover:decoration-teal-900">
+        <span className="text-[11px] font-medium underline decoration-teal-700 underline-offset-2 group-hover:decoration-teal-900">
           n={count}
         </span>
       ) : null}
@@ -821,7 +821,7 @@ function ExternalLink({
       rel="noopener noreferrer"
       title={title}
       onClick={(e) => e.stopPropagation()}
-      className={`font-medium text-teal-700 underline decoration-teal-700/40 underline-offset-2 hover:text-teal-900 hover:decoration-teal-900 ${mono ? "font-mono" : ""}`}
+      className={`font-medium text-teal-700 underline decoration-teal-700 underline-offset-2 hover:text-teal-900 hover:decoration-teal-900 ${mono ? "font-mono" : ""}`}
     >
       {children}
       <ExternalLinkIcon />

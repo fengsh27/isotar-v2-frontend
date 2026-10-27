@@ -34,9 +34,14 @@ body {
   font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* In the base layer so utility classes on a link (text-teal-700, underline)
+   win. Unlayered, this rule outranked every Tailwind utility and silently
+   stripped link styling across the app. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 code,
