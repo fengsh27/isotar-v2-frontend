@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.5](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.4...v0.2.5) (2026-10-27)
+
+
+### Bug Fixes
+
+* **ui:** let utility classes style links ([3495a82](https://github.com/fengsh27/isotar-v2-frontend/commit/3495a82c7cc9ed6cd31744aa99d5630b2b535f8c))
+
 ### [0.2.4](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.3...v0.2.4) (2026-10-27)
 
 
