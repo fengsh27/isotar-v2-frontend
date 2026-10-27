@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.4](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.3...v0.2.4) (2026-10-27)
+
+
+### Features
+
+* **network:** make literature links stand out in the verification panel ([80b42d3](https://github.com/fengsh27/isotar-v2-frontend/commit/80b42d37ddcb6376ffe1ded17153b5f3dd0cb37b))
+
 ### [0.2.3](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.2...v0.2.3) (2026-10-27)
 
 
