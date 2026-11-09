@@ -56,6 +56,48 @@ export interface ResolvedPrecursor {
 }
 
 /**
+ * 1-based inclusive mature window inside `ext_pre_seq`.
+ *
+ * The extended coordinates do not share one convention across the catalog. The
+ * human file stores `ext_mature_loc_start` 0-based, so its mature region is
+ * `ext_pre_seq[start, end)`; the nine non-human files store it 1-based
+ * inclusive. `ext_mature_loc_end` reads the same under both, so only the start
+ * differs — and read 1-based, a human window carries one extra precursor base
+ * at the 5' end, which is why the shift preview showed a 23 nt "mature"
+ * sequence for a 22 nt miRNA.
+ *
+ * Rather than special-casing human, anchor the window on the sequence:
+ * `mature_seq` occurs in `ext_pre_seq` for every record in all ten files, so
+ * keep the stored start when it reproduces `mature_seq` and read it as 0-based
+ * when the next position does. The stored value survives untouched only when
+ * neither lines up, which no shipped record does.
+ */
+export function extMatureWindow(record: MirnaRecord): {
+  start: number;
+  end: number;
+} {
+  const ext = record.ext_pre_seq;
+  const mature = record.mature_seq;
+  const stored = record.ext_mature_loc_start;
+  if (!mature) {
+    return { start: stored, end: record.ext_mature_loc_end };
+  }
+
+  let start = stored;
+  const matchesAt = (oneBased: number) =>
+    oneBased >= 1 && ext.slice(oneBased - 1, oneBased - 1 + mature.length) === mature;
+  if (!matchesAt(stored)) {
+    if (matchesAt(stored + 1)) {
+      start = stored + 1;
+    } else {
+      const found = ext.indexOf(mature);
+      if (found >= 0) start = found + 1;
+    }
+  }
+  return { start, end: start + mature.length - 1 };
+}
+
+/**
  * Resolve the precursor sequence to use for a record, with its paired mature
  * coordinates. Some species records omit `ext_pre_seq` and/or `pre_seq`, so the
  * fallback chain is: `ext_pre_seq` → `pre_seq` → `mature_seq`. The mature
@@ -64,10 +106,11 @@ export interface ResolvedPrecursor {
  */
 export function resolvePrecursor(record: MirnaRecord): ResolvedPrecursor {
   if (record.ext_pre_seq?.trim()) {
+    const ext = extMatureWindow(record);
     return {
       seq: record.ext_pre_seq,
-      matureStart: record.ext_mature_loc_start,
-      matureEnd: record.ext_mature_loc_end,
+      matureStart: ext.start,
+      matureEnd: ext.end,
       source: "ext_pre_seq",
     };
   }
