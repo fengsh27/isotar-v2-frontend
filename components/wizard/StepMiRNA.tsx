@@ -6,6 +6,7 @@ import { Alert, Button, Spinner } from "@heroui/react";
 import { copyText } from "@/lib/clipboard";
 import { useWizardStore } from "@/stores/wizardStore";
 import {
+  extMatureWindow,
   hasMirnaDataset,
   loadMirnaDataset,
   speciesLabel,
@@ -194,11 +195,15 @@ export function StepMiRNA() {
       selectedRecord.mature_seq,
     )
     : null;
+  // `ext_mature_loc_start` is 0-based in the human catalog and 1-based in every
+  // other species file, so highlight (and report) the window `extMatureWindow`
+  // anchors on the sequence rather than the raw field.
+  const extMatureLoc = selectedRecord ? extMatureWindow(selectedRecord) : null;
   const extPrecursorHighlight = selectedRecord
     ? getHighlightedSegments(
       selectedRecord.ext_pre_seq,
-      selectedRecord.ext_mature_loc_start,
-      selectedRecord.ext_mature_loc_end,
+      extMatureLoc?.start,
+      extMatureLoc?.end,
       selectedRecord.mature_seq,
     )
     : null;
@@ -511,8 +516,8 @@ export function StepMiRNA() {
             {hasExtPreSeq ? (
               <>
                 <p className="text-sm text-zinc-800">
-                  <strong>Extended mature location:</strong> {selectedRecord.ext_mature_loc_start}–
-                  {selectedRecord.ext_mature_loc_end}
+                  <strong>Extended mature location:</strong> {extMatureLoc?.start}–
+                  {extMatureLoc?.end}
                 </p>
 
                 <div>

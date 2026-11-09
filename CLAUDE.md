@@ -90,6 +90,15 @@ LLM agents MUST respect the following hierarchy:
 - Example: `hsa-miR-495-3p`
 - Validated against authoritative sources (e.g., miRBase)
 - The per-species catalog is bundled client-side as `data/<genome>_mature_pre_mirna_ext.json` (human uses the unprefixed file) and loaded through `lib/mirnaData.ts`. Location fields are inconsistently typed across species files, so every record goes through `normalizeRecord`; precursor sequence resolution falls back `ext_pre_seq → pre_seq → mature_seq`
+- ⚠️ The extended mature coordinates also disagree **by convention**:
+  `ext_mature_loc_start` is 0-based in the human file and 1-based inclusive in
+  the nine others (`ext_mature_loc_end` reads the same either way). Never read
+  `ext_mature_loc_start` directly — go through `extMatureWindow`
+  (`lib/mirnaData.ts`), which anchors the window on `mature_seq` itself, or
+  through `resolvePrecursor` / `resolveShiftedMature`, which already do. Read
+  1-based, the human window carries one extra precursor base at the 5′ end.
+  The backend's `apply_shift` reads these fields 0-based and so is wrong for the
+  other nine species — `../isoTar-v2/TODO.md`, item 7
 - A custom mature sequence (17–30 nt, named by the user) may be supplied instead of a catalog ID; it is submitted as `mirna_seq` with the name in `mirna_id`
 - Species-specific interpretation
 
