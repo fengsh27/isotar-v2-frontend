@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.6](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.1...v0.2.6) (2026-11-09)
+
+
+### Features
+
+* **network:** cite the literature under each verified triplet ([3576525](https://github.com/fengsh27/isotar-v2-frontend/commit/3576525cf770beaef149076d8180263c41a883e7))
+* **network:** literature verification panel for mir-network jobs ([fa6339c](https://github.com/fengsh27/isotar-v2-frontend/commit/fa6339c1be89670c4f797e1ea15fb951620f551c))
+* **network:** make literature links stand out in the verification panel ([80b42d3](https://github.com/fengsh27/isotar-v2-frontend/commit/80b42d37ddcb6376ffe1ded17153b5f3dd0cb37b))
+
+
+### Bug Fixes
+
+* **mirna:** anchor the mature window on the sequence, not the coordinate ([e1ed0bb](https://github.com/fengsh27/isotar-v2-frontend/commit/e1ed0bb7472801f7163cd581dcc9c9dcf9ffccef))
+* **ui:** let utility classes style links ([3495a82](https://github.com/fengsh27/isotar-v2-frontend/commit/3495a82c7cc9ed6cd31744aa99d5630b2b535f8c))
+
 ### [0.2.5](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.4...v0.2.5) (2026-10-27)
 
 
