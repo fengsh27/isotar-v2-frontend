@@ -22,7 +22,6 @@ import {
   ApiError,
   getEnrichment,
   getEnrichmentDotplotUrl,
-  getJobResults,
   runEnrichment,
 } from "@/lib/api";
 import type { EnrichmentResult, EnrichmentTerm } from "@/lib/types";
@@ -110,36 +109,11 @@ export function EnrichmentPanel({ jobId, organism: organismProp }: Props) {
         throw new Error("Cutoff must be a number between 0 and 1.");
       }
 
-      // The backend's maximum page size. Each /result call costs ~0.85 s
-      // whatever its size, so fewer, larger pages collect the gene list
-      // several times faster (7,742 rows: 8 calls instead of 39).
-      const PAGE = 1000;
-      const collected = new Set<string>();
-      let offset = 0;
-      let total = Infinity;
-
-      while (offset < total) {
-        const page = await getJobResults(jobId, { number: PAGE, offset });
-        total = page.total_genes ?? page.total ?? page.genes.length;
-        for (const g of page.genes) {
-          const label = (g.gene_label ?? "").trim();
-          if (label) collected.add(label);
-        }
-        if (page.genes.length === 0) break;
-        offset += page.genes.length;
-      }
-
-      const genes = Array.from(collected);
-      if (genes.length === 0) {
-        throw new Error("No predicted genes available for enrichment.");
-      }
-
-      // Returns as soon as the run is queued; polling picks up from here.
-      await runEnrichment(jobId, {
-        genes,
-        organism,
-        cutoff: cutoffNum,
-      });
+      // No gene list in the request: the backend enriches the job's own
+      // predicted genes. Sending them (44 KB for ~4,700 genes) made the
+      // institutional proxy reject the request with 413. Returns as soon as
+      // the run is queued; polling picks up from here.
+      await runEnrichment(jobId, { organism, cutoff: cutoffNum });
       setModalOpen(false);
       setPollKey((k) => k + 1);
     } catch (err) {
@@ -163,8 +137,9 @@ export function EnrichmentPanel({ jobId, organism: organismProp }: Props) {
   const active = isActive(status);
   const results = finishedResults(status);
   const params = status?.params;
+  // gene_count is null while the backend is still collecting the job's genes.
   const paramsText = params
-    ? `${params.gene_count.toLocaleString()} genes, ${params.organism}, adjusted P < ${params.cutoff}`
+    ? `${params.gene_count != null ? `${params.gene_count.toLocaleString()} genes` : "the predicted genes"}, ${params.organism}, adjusted P < ${params.cutoff}`
     : "";
 
   let summary: string;

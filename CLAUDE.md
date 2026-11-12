@@ -310,6 +310,11 @@ All calls go through `lib/api.ts` using **relative** paths. The `rewrites()` in
   3 s while `status` is `queued` / `running` (the same pattern as
   `VerificationPanel`). A missing `status` means a backend older than this,
   whose GET returned only finished results.
+* ⚠️ Keep request bodies small. The institutional proxy in front of the public
+  site rejects bodies of a few tens of KB with an HTML `413` before they reach
+  isoTar (so nothing appears in either container's logs). The enrichment POST
+  therefore sends only `{organism, cutoff}` and the backend enriches the job's
+  own predicted genes; never send a job's gene list from the browser.
 * Image and download URLs are always built same-origin, never with
   `NEXT_PUBLIC_API_BASE`: browsers block mixed-content image loads and
   downloads on an HTTPS page served by an HTTP backend.
