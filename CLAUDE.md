@@ -278,7 +278,6 @@ app/
   jobs/           → job list
   jobs/[jobId]/   → job status & results (incl. the network graph)
   docs/, about/   → static pages
-  api/v1/jobs/[jobId]/enrichment/        → local Route Handler
   api/v1/jobs/[jobId]/result/download/   → local Route Handler
 components/
   wizard/         → shared single-miRNA steps
@@ -297,13 +296,20 @@ All calls go through `lib/api.ts` using **relative** paths. The `rewrites()` in
 
 * `NEXT_PUBLIC_API_BASE` exists only to **bypass** that proxy for a deployment
   where the API lives on another origin. It is normally unset.
-* Two paths are deliberately excluded from the rewrite and handled by local
-  Route Handlers instead, because the rewrite proxy caps upstream at 30 s:
-  `/api/v1/jobs/<id>/enrichment` and `/api/v1/jobs/<id>/result/download`.
-  Subpaths (e.g. `…/enrichment/dotplot`) still rewrite through. The negative
-  lookaheads in the rewrite `source` regex implement this — in Next.js,
+* One path is deliberately excluded from the rewrite and handled by a local
+  Route Handler instead, because the rewrite proxy caps upstream at 30 s:
+  `/api/v1/jobs/<id>/result/download` (building a large zip). The negative
+  lookahead in the rewrite `source` regex implements this — in Next.js,
   `afterFiles` rewrites run *before* dynamic routes, so a plain
-  `/api/v1/:path*` would always preempt the handlers.
+  `/api/v1/:path*` would always preempt the handler.
+* ⚠️ Never put a long-running call behind a synchronous request. The backend
+  API runs a **single** gunicorn worker, so one slow request stalls every
+  other user's requests, and any request waiting over 30 s fails at the
+  rewrite proxy. Enrichment is therefore a backend task: `POST …/enrichment`
+  returns `202` at once and `EnrichmentPanel` polls `GET …/enrichment` every
+  3 s while `status` is `queued` / `running` (the same pattern as
+  `VerificationPanel`). A missing `status` means a backend older than this,
+  whose GET returned only finished results.
 * Image and download URLs are always built same-origin, never with
   `NEXT_PUBLIC_API_BASE`: browsers block mixed-content image loads and
   downloads on an HTTPS page served by an HTTP backend.

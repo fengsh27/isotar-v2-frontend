@@ -17,16 +17,14 @@ const nextConfig: NextConfig = {
     return [
       {
         // Match anything under /api/v1/ EXCEPT exactly
-        // /api/v1/jobs/<id>/enrichment and /api/v1/jobs/<id>/result/download —
-        // those paths are handled locally by Route Handlers under
-        // app/api/v1/jobs/[jobId]/ so we can control the upstream timeout
-        // (this proxy caps it at 30s, which is too short for both). Subpaths
-        // (e.g. .../enrichment/dotplot) still rewrite through to the backend
-        // as normal.
+        // /api/v1/jobs/<id>/result/download — that path is handled locally by
+        // a Route Handler under app/api/v1/jobs/[jobId]/ so we can control
+        // the upstream timeout (this proxy caps it at 30s, too short for
+        // building a large zip). Enrichment needs no exception: it runs as a
+        // backend task, so every enrichment request returns quickly.
         // In Next.js, afterFiles rewrites run BEFORE dynamic routes, so a
         // plain /api/v1/:path* would always preempt the Route Handler.
-        source:
-          "/api/v1/:path((?!jobs/[^/]+/enrichment$)(?!jobs/[^/]+/result/download$).+)",
+        source: "/api/v1/:path((?!jobs/[^/]+/result/download$).+)",
         destination: `${apiBase}/api/v1/:path`,
       },
       {

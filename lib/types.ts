@@ -314,9 +314,20 @@ export interface EnrichmentRunRequest {
   cutoff?: number;
 }
 
+/** Enrichment runs as a background task: POST queues it and GET reports it. */
+export type EnrichmentStatusValue = "queued" | "running" | "succeeded" | "failed";
+
+export interface EnrichmentParams {
+  organism: string;
+  cutoff: number;
+  gene_count: number;
+}
+
 export interface EnrichmentRunResponse {
   job_id: string;
-  outdir: string;
+  status: EnrichmentStatusValue;
+  task_id?: string;
+  params?: EnrichmentParams;
 }
 
 export interface EnrichmentTerm {
@@ -329,8 +340,20 @@ export interface EnrichmentTerm {
   genes: string[];
 }
 
+/** `databases` / `has_dotplot` are filled once `status` is "succeeded" and
+ *  empty before. `status` is absent only from a backend older than async
+ *  enrichment, which answered GET with finished results alone. */
 export interface EnrichmentResult {
   job_id: string;
+  status?: EnrichmentStatusValue;
+  params?: EnrichmentParams | null;
+  queued_at?: number | null;
+  started_at?: number | null;
+  finished_at?: number | null;
+  /** Why a failed run failed. */
+  error?: string | null;
+  /** Tail of the enrichment script's output for a failed run. */
+  stderr?: string | null;
   databases: Record<string, EnrichmentTerm[]>;
   has_dotplot: boolean;
 }
