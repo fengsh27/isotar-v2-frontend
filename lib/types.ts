@@ -308,8 +308,11 @@ export interface JobResultsParams {
   number?: number;
 }
 
+/** Omit `genes` to enrich the job's own predicted genes; the backend collects
+ *  them, which keeps the request small enough for the institutional proxy
+ *  (it rejects a full gene list with 413). */
 export interface EnrichmentRunRequest {
-  genes: string[];
+  genes?: string[];
   organism?: string;
   cutoff?: number;
 }
@@ -320,7 +323,10 @@ export type EnrichmentStatusValue = "queued" | "running" | "succeeded" | "failed
 export interface EnrichmentParams {
   organism: string;
   cutoff: number;
-  gene_count: number;
+  /** "job": the backend collected the job's predicted genes; "request": sent by the client. */
+  gene_source?: "job" | "request";
+  /** null until the backend has collected the job's genes. */
+  gene_count: number | null;
 }
 
 export interface EnrichmentRunResponse {
