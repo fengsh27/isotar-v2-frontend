@@ -48,18 +48,34 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   const raw = await response.text();
-  const data = raw ? (JSON.parse(raw) as unknown) : null;
+  let data: unknown = null;
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      // Not JSON: a proxy, gateway or firewall answered with its own page
+      // (e.g. an HTML 504 after a timeout). Report that instead of the
+      // parser's "Unrecognized token '<'".
+      throw new ApiError(nonJsonMessage(response, raw, path), response.status);
+    }
+  }
 
   if (!response.ok) {
-    throw new ApiError(errorMessage(data, response.status), response.status);
+    throw new ApiError(errorMessage(data, response), response.status);
   }
 
   return data as T;
 }
 
+function statusLine(response: Response): string {
+  return response.statusText
+    ? `HTTP ${response.status} ${response.statusText}`
+    : `HTTP ${response.status}`;
+}
+
 /** The backend reports failures as `{error, hint?}` (a few older endpoints as
  *  `{message}`); fold them into one readable line. */
-function errorMessage(data: unknown, status: number): string {
+function errorMessage(data: unknown, response: Response): string {
   if (typeof data === "object" && data !== null) {
     const rec = data as { error?: unknown; message?: unknown; hint?: unknown };
     const main =
@@ -72,7 +88,24 @@ function errorMessage(data: unknown, status: number): string {
       return typeof rec.hint === "string" ? `${main} (${rec.hint})` : main;
     }
   }
-  return `Request failed (${status})`;
+  return `Request failed (${statusLine(response)})`;
+}
+
+/** Describe a response whose body is not JSON — almost always an HTML page
+ *  from something between the browser and isoTar (gateway timeout, firewall
+ *  block, login page). Names the status, the page's own title and the request,
+ *  so the failure can be reported and traced. */
+function nonJsonMessage(response: Response, raw: string, path: string): string {
+  const title = raw.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1];
+  const text = (title ?? raw.replace(/<[^>]*>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+  const request = path.split("?")[0];
+  const what = response.ok
+    ? `expected data from ${request} but received a web page instead (${statusLine(response)})`
+    : `${request} failed with ${statusLine(response)}; the server returned a web page instead of an error message`;
+  return `${what}${text ? `: "${text}"` : ""}. This usually comes from the network proxy in front of isoTar; please try again, and report the time and job ID if it persists.`;
 }
 
 export async function validateMiRNA(
@@ -163,18 +196,16 @@ export async function getJobResults(
 }
 
 export async function getJobResult(jobId: string): Promise<Blob> {
-  const response = await fetch(
-    toUrl(`/api/v1/jobs/${encodeURIComponent(jobId)}/result`),
-    { cache: "no-store" },
-  );
+  const path = `/api/v1/jobs/${encodeURIComponent(jobId)}/result`;
+  const response = await fetch(toUrl(path), { cache: "no-store" });
 
   if (!response.ok) {
     const text = await response.text();
-    let message = `Request failed (${response.status})`;
+    let message: string;
     try {
-      message = errorMessage(JSON.parse(text) as unknown, response.status);
+      message = errorMessage(JSON.parse(text) as unknown, response);
     } catch {
-      // non-JSON error body
+      message = nonJsonMessage(response, text, path);
     }
     throw new ApiError(message, response.status);
   }
