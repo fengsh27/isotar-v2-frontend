@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.8](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.7...v0.2.8) (2026-11-12)
+
+
+### Bug Fixes
+
+* **enrichment:** stop sending the gene list in the enrichment request ([49cd623](https://github.com/fengsh27/isotar-v2-frontend/commit/49cd6231b885fcb53a90cf946b4ece0f38345c5f))
+
 ### [0.2.7](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.5...v0.2.7) (2026-11-12)
 
 
