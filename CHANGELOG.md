@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.7](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.5...v0.2.7) (2026-11-12)
+
+
+### Features
+
+* **enrichment:** poll the background enrichment run ([96302d9](https://github.com/fengsh27/isotar-v2-frontend/commit/96302d96b25e1bb6a88747aad0f673044b39cb90))
+
+
+### Bug Fixes
+
+* **api:** report non-JSON responses instead of a JSON parse error ([3f5c11d](https://github.com/fengsh27/isotar-v2-frontend/commit/3f5c11d1798d0fe4dcd42a345c28e91a3dd05b13))
+* **mirna:** anchor the mature window on the sequence, not the coordinate ([e1ed0bb](https://github.com/fengsh27/isotar-v2-frontend/commit/e1ed0bb7472801f7163cd581dcc9c9dcf9ffccef))
+
 ### [0.2.6](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.1...v0.2.6) (2026-11-09)
 
 
