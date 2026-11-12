@@ -66,9 +66,10 @@ cross-origin HTTP backend will have its images and downloads blocked as mixed
 content, which is why the dotplot and result-zip URLs are always built
 same-origin regardless of this setting.
 
-Two endpoints are excluded from the proxy and served by local Route Handlers
+One endpoint is excluded from the proxy and served by a local Route Handler
 under `app/api/v1/jobs/[jobId]/`, because the rewrite proxy caps upstream
-requests at 30 s: `…/enrichment` and `…/result/download`.
+requests at 30 s: `…/result/download`. Enrichment needs no exception: the
+backend runs it as a background task, and the page polls for its result.
 
 ### Running with Docker Compose
 

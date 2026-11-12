@@ -33,6 +33,25 @@ const ORGANISM_OPTIONS = [
   { value: "Rat", label: "Rat" },
 ];
 
+const POLL_MS = 3000;
+
+/** Queued or running on the backend's enrichment worker. */
+function isActive(status: EnrichmentResult | null): boolean {
+  return status?.status === "queued" || status?.status === "running";
+}
+
+/** Finished results to show, or null. A backend older than async enrichment
+ *  sends no `status`; its GET only ever answered with finished results. */
+function finishedResults(status: EnrichmentResult | null): EnrichmentResult | null {
+  if (!status) return null;
+  if (status.status) return status.status === "succeeded" ? status : null;
+  return Object.keys(status.databases ?? {}).length > 0 ? status : null;
+}
+
+function formatTime(epochSeconds: number | null | undefined): string {
+  return epochSeconds ? new Date(epochSeconds * 1000).toLocaleTimeString() : "";
+}
+
 interface Props {
   jobId: string;
   /** Enrichr organism for this job's species; the selector is locked to it. */
@@ -43,39 +62,58 @@ export function EnrichmentPanel({ jobId, organism: organismProp }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [organism, setOrganism] = useState(organismProp ?? "Human");
   const [cutoff, setCutoff] = useState("0.05");
-  const [running, setRunning] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [result, setResult] = useState<EnrichmentResult | null>(null);
+  const [status, setStatus] = useState<EnrichmentResult | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [error, setError] = useState("");
+  // Bumped after a run is queued to restart polling.
+  const [pollKey, setPollKey] = useState(0);
 
+  // Load the enrichment state, and keep polling while a run is queued or
+  // running — including one started before this page was opened.
   useEffect(() => {
     let active = true;
-    getEnrichment(jobId)
-      .then((res) => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      try {
+        const next = await getEnrichment(jobId);
         if (!active) return;
-        if (res && res.databases && Object.keys(res.databases).length > 0) {
-          setResult(res);
-        }
-      })
-      .catch((err) => {
+        setStatus(next);
+        setLoadError("");
+        if (isActive(next)) timeoutId = setTimeout(load, POLL_MS);
+      } catch (err) {
+        if (!active) return;
         if (err instanceof ApiError && err.status === 404) {
-          return;
+          setStatus(null);
+        } else {
+          setLoadError(err instanceof Error ? err.message : "Could not load the enrichment.");
+          timeoutId = setTimeout(load, POLL_MS * 2);
         }
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    load();
     return () => {
       active = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [jobId]);
+  }, [jobId, pollKey]);
 
   async function handleRun() {
-    setRunning(true);
+    setSubmitting(true);
     setError("");
     try {
-      const PAGE = 200;
+      const cutoffNum = parseFloat(cutoff);
+      if (!Number.isFinite(cutoffNum) || cutoffNum <= 0 || cutoffNum > 1) {
+        throw new Error("Cutoff must be a number between 0 and 1.");
+      }
+
+      // The backend's maximum page size. Each /result call costs ~0.85 s
+      // whatever its size, so fewer, larger pages collect the gene list
+      // several times faster (7,742 rows: 8 calls instead of 39).
+      const PAGE = 1000;
       const collected = new Set<string>();
       let offset = 0;
       let total = Infinity;
@@ -96,24 +134,21 @@ export function EnrichmentPanel({ jobId, organism: organismProp }: Props) {
         throw new Error("No predicted genes available for enrichment.");
       }
 
-      const cutoffNum = parseFloat(cutoff);
-      if (!Number.isFinite(cutoffNum) || cutoffNum <= 0 || cutoffNum > 1) {
-        throw new Error("Cutoff must be a number between 0 and 1.");
-      }
-
+      // Returns as soon as the run is queued; polling picks up from here.
       await runEnrichment(jobId, {
         genes,
         organism,
         cutoff: cutoffNum,
       });
-
-      const fresh = await getEnrichment(jobId);
-      setResult(fresh);
       setModalOpen(false);
+      setPollKey((k) => k + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to run enrichment.");
+      setError(err instanceof Error ? err.message : "Failed to start enrichment.");
+      // A 409 means a run is already going (e.g. started in another tab):
+      // poll so the panel shows it.
+      if (err instanceof ApiError && err.status === 409) setPollKey((k) => k + 1);
     } finally {
-      setRunning(false);
+      setSubmitting(false);
     }
   }
 
@@ -125,20 +160,68 @@ export function EnrichmentPanel({ jobId, organism: organismProp }: Props) {
     );
   }
 
+  const active = isActive(status);
+  const results = finishedResults(status);
+  const params = status?.params;
+  const paramsText = params
+    ? `${params.gene_count.toLocaleString()} genes, ${params.organism}, adjusted P < ${params.cutoff}`
+    : "";
+
+  let summary: string;
+  if (active) {
+    summary =
+      status?.status === "running"
+        ? `Enrichment is running on Enrichr${paramsText ? ` (${paramsText})` : ""}, started ${formatTime(status?.started_at)}.`
+        : `Enrichment is queued${paramsText ? ` (${paramsText})` : ""}, since ${formatTime(status?.queued_at)}.`;
+  } else if (results) {
+    summary = `Enrichment computed across ${Object.keys(results.databases).length} database(s)${paramsText ? ` from ${paramsText}` : ""}.`;
+  } else if (status?.status === "failed") {
+    summary = "The last enrichment run failed.";
+  } else {
+    summary = "Run enrichment analysis on the predicted target genes via Enrichr.";
+  }
+
   return (
     <div className="mt-4 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3">
-        <p className="text-sm text-zinc-600">
-          {result
-            ? `Enrichment computed across ${Object.keys(result.databases).length} database(s).`
-            : "Run enrichment analysis on the predicted target genes via Enrichr."}
-        </p>
-        <Button color="primary" onPress={() => setModalOpen(true)}>
-          {result ? "Re-run Enrichment" : "Run Enrichment Analysis"}
+        <div className="flex items-center gap-2">
+          {active ? <Spinner size="sm" /> : null}
+          <p className="text-sm text-zinc-600">
+            {summary}
+            {active ? " It usually takes about a minute; you can leave this page and come back." : ""}
+          </p>
+        </div>
+        <Button color="primary" onPress={() => setModalOpen(true)} isDisabled={active}>
+          {status ? "Re-run Enrichment" : "Run Enrichment Analysis"}
         </Button>
       </div>
 
-      {result ? <EnrichmentTabs result={result} jobId={jobId} /> : null}
+      {loadError ? (
+        <Alert color="warning" variant="flat" title="Could not refresh the enrichment status" description={loadError} />
+      ) : null}
+
+      {status?.status === "failed" ? (
+        <Alert
+          color="danger"
+          variant="flat"
+          title={`Enrichment failed: ${status.error ?? "unknown error"}`}
+          description={
+            <div className="space-y-1">
+              <p>Check the organism and cutoff, then re-run it. If it keeps failing, report the job ID.</p>
+              {status.stderr ? (
+                <details>
+                  <summary className="cursor-pointer text-xs">Show the enrichment script output</summary>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-white/70 p-2 text-[11px] text-zinc-700">
+                    {status.stderr}
+                  </pre>
+                </details>
+              ) : null}
+            </div>
+          }
+        />
+      ) : null}
+
+      {results ? <EnrichmentTabs result={results} jobId={jobId} /> : null}
 
       <Modal isOpen={modalOpen} onOpenChange={setModalOpen} size="md">
         <ModalContent>
@@ -184,14 +267,14 @@ export function EnrichmentPanel({ jobId, organism: organismProp }: Props) {
                 <Button
                   variant="flat"
                   onPress={onClose}
-                  isDisabled={running}
+                  isDisabled={submitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   color="primary"
                   onPress={handleRun}
-                  isLoading={running}
+                  isLoading={submitting}
                 >
                   Run
                 </Button>
