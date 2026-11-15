@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.9](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.8...v0.2.9) (2026-11-15)
+
+
+### Features
+
+* **results:** per-sequence views and WT vs variant comparison ([f271e80](https://github.com/fengsh27/isotar-v2-frontend/commit/f271e8014a9253dad79cddc7c02f234c826985cd))
+
 ### [0.2.8](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.7...v0.2.8) (2026-11-12)
 
 
