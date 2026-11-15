@@ -58,7 +58,7 @@ export const MIN_NETWORK_PAIRS = 1;
 export const STEP_CONTEXT: Record<number, string> = {
   0: "Species defines biological scope first. For Homo sapiens, select reference file hg19 or hg38.",
   1: "Choose one miRNA identifier from the available list for the selected species.",
-  2: "Configure optional Modification and Shift sub-steps. At least one must be provided.",
+  2: "Configure the optional Shift and Modification sub-steps, or skip both. Each variant is predicted separately from the wild type, and the results can compare the two.",
   3: "Select one or more prediction tools. Tool outputs are preserved as reported by each tool.",
   4: "Advanced configuration is optional and collapsed by default. Visible defaults keep runs reproducible.",
   5: "Review your run request, then start an immutable asynchronous job.",
