@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Input, Spinner } from "@heroui/react";
 
 import { getJobResults } from "@/lib/api";
-import type { JobResultsResponse, VennData } from "@/lib/types";
+import type { JobResultsResponse, SequenceInfo, VennData } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
@@ -13,7 +13,11 @@ type SortOrder = "asc" | "desc";
 
 interface Props {
   jobId: string;
+  /** Record ids to show; `null` for the backend default (the wild-type records). */
+  sequences?: string[] | null;
   onVennData?: (venn: VennData) => void;
+  /** Reports the job's records (once per load) so the parent can offer a selector. */
+  onSequences?: (sequences: SequenceInfo[]) => void;
 }
 
 function SortIcon({ active, order }: { active: boolean; order: SortOrder }) {
@@ -21,7 +25,7 @@ function SortIcon({ active, order }: { active: boolean; order: SortOrder }) {
   return <span className="text-teal-600">{order === "asc" ? "↑" : "↓"}</span>;
 }
 
-export function PredictedGenesTable({ jobId, onVennData }: Props) {
+export function PredictedGenesTable({ jobId, sequences = null, onVennData, onSequences }: Props) {
   const [filterInput, setFilterInput] = useState("");
   const [keyword, setKeyword] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("tool_count");
@@ -33,7 +37,11 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
   const [error, setError] = useState("");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const vennReportedRef = useRef(false);
+  // The Venn/UpSet plots describe the selected records, so they are reported
+  // once per selection (not per page or keyword, whose venn is filtered).
+  const selectionKey = sequences ? sequences.join("\n") : "";
+  const vennReportedForRef = useRef<string | null>(null);
+  const sequencesReportedRef = useRef(false);
 
   function handleFilterChange(value: string) {
     setFilterInput(value);
@@ -55,14 +63,18 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
       ascendOrDescend: order,
       offset,
       number: PAGE_SIZE,
+      sequences: sequences ?? undefined,
     })
       .then((result) => {
         if (!active) return;
         setData(result);
-        // Report venn data once to parent
-        if (!vennReportedRef.current && result.venn && onVennData) {
-          vennReportedRef.current = true;
+        if (!keyword && result.venn && onVennData && vennReportedForRef.current !== selectionKey) {
+          vennReportedForRef.current = selectionKey;
           onVennData(result.venn);
+        }
+        if (!sequencesReportedRef.current && result.sequences && onSequences) {
+          sequencesReportedRef.current = true;
+          onSequences(result.sequences);
         }
       })
       .catch((err) => {
@@ -77,7 +89,7 @@ export function PredictedGenesTable({ jobId, onVennData }: Props) {
     return () => {
       active = false;
     };
-  }, [jobId, keyword, sortBy, order, offset, onVennData]);
+  }, [jobId, keyword, sortBy, order, offset, sequences, selectionKey, onVennData, onSequences]);
 
   function toggleSort(column: SortBy) {
     if (sortBy === column) {

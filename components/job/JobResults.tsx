@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button, Tab, Tabs } from "@heroui/react";
 
+import { CompareTable } from "@/components/job/CompareTable";
 import { EnrichmentPanel } from "@/components/job/EnrichmentPanel";
 import { NetworkPanel } from "@/components/job/NetworkPanel";
 import { PredictedGenesTable } from "@/components/job/PredictedGenesTable";
+import { SequenceSelector, type CompareSelection } from "@/components/job/SequenceSelector";
 import { VennDiagram } from "@/components/job/VennDiagram";
 import { enrichmentOrganismForGenome } from "@/lib/constants";
-import type { VennData, WorkflowType } from "@/lib/types";
+import type { SequenceInfo, VennData, WorkflowType } from "@/lib/types";
 
 interface Props {
   jobId: string;
@@ -19,6 +21,13 @@ interface Props {
 
 export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
   const [venn, setVenn] = useState<VennData | null>(null);
+  // The job's miRNA records (WT plus any variants), reported by the table's
+  // first load. `selected` null = the backend default, the WT records.
+  const [sequences, setSequences] = useState<SequenceInfo[]>([]);
+  const [selected, setSelected] = useState<string[] | null>(null);
+  const [compare, setCompare] = useState<CompareSelection | null>(null);
+
+  const handleSequences = useCallback((list: SequenceInfo[]) => setSequences(list), []);
 
   // Enrichment requires protein-coding gene symbols, so it is offered only for
   // the gene (miR-Target) workflow AND species with a supported Enrichr organism.
@@ -33,6 +42,12 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
   const downloadUrl = `/api/v1/jobs/${jobId}/result/download`;
   const isNetwork = workflow === "mir-network";
 
+  const byId = new Map(sequences.map((s) => [s.sequence, s]));
+  const compareWt = compare ? byId.get(compare.wt) : undefined;
+  const compareVariant = compare ? byId.get(compare.variant) : undefined;
+  const shownLabel =
+    selected && selected.length === 1 ? byId.get(selected[0])?.label : undefined;
+
   return (
     <section className="surface-panel rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -45,7 +60,7 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
           ) : mirnaId ? (
             <p className="text-sm text-zinc-600">
               Predicted targets of{" "}
-              <span className="font-medium text-zinc-800">{mirnaId}</span>
+              <span className="font-medium text-zinc-800">{shownLabel ?? mirnaId}</span>
             </p>
           ) : null}
         </div>
@@ -67,8 +82,28 @@ export function JobResults({ jobId, mirnaId, genome, workflow }: Props) {
       <Tabs aria-label="Result sections" variant="underlined">
         <Tab key="targets" title="Predicted Targets">
           <div className="mt-4 space-y-6">
-            {venn ? <VennDiagram venn={venn} /> : null}
-            <PredictedGenesTable jobId={jobId} onVennData={setVenn} />
+            {sequences.length > 1 ? (
+              <SequenceSelector
+                sequences={sequences}
+                selected={selected}
+                compare={compare}
+                onSelect={setSelected}
+                onCompare={setCompare}
+              />
+            ) : null}
+            {compare && compareWt && compareVariant ? (
+              <CompareTable jobId={jobId} wt={compareWt} variant={compareVariant} />
+            ) : (
+              <>
+                {venn ? <VennDiagram venn={venn} /> : null}
+                <PredictedGenesTable
+                  jobId={jobId}
+                  sequences={selected}
+                  onVennData={setVenn}
+                  onSequences={handleSequences}
+                />
+              </>
+            )}
           </div>
         </Tab>
 

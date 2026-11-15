@@ -420,7 +420,16 @@ workflow-dependent:
   `VennDiagram` / `UpSetPlot` / `ConsensusHistogram` when the backend returns
   `venn`), and an **Enrichment** tab only when `enrichmentOrganismForGenome`
   resolves and the workflow is not `mir-lncrna` (lncRNA targets have no
-  gene-symbol identity)
+  gene-symbol identity). A job with a shift or modification ran the wild type
+  and each variant as separate records, which the backend never merges: the
+  `/result` response lists them in `sequences` and shows the WT records by
+  default. When there is more than one, `JobResults` mounts `SequenceSelector`
+  above the table; picking a record re-queries the table and the Venn/UpSet
+  for that record only (`sequence` parameter), and "vs WT" swaps the table for
+  `CompareTable` (`view=compare`), which classifies every target as shared /
+  gained / lost / changed. "Lost" is worded as "no longer predicted", never as
+  evidence of no binding. Enrichment of the job's own genes uses the WT
+  records (`EnrichmentRunRequest.sequence` can name another record).
 
 ### Literature verification (mir-network only)
 

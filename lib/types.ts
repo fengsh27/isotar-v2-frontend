@@ -288,8 +288,29 @@ export interface VennData {
   degrees?: Record<string, number>;
 }
 
+/**
+ * One miRNA record the job ran. A job with a shift or modification runs the
+ * wild type and each variant as separate records, and the backend keeps their
+ * predictions apart; `sequence` is the id used to select or compare them.
+ */
+export interface SequenceInfo {
+  sequence: string;
+  /** The miRNA the record belongs to, e.g. `hsa-miR-21-5p`. */
+  base_id: string;
+  /** FASTA header as run, e.g. `hsa-miR-21-5p,1|0,shifted`. */
+  header: string;
+  /** `hsa-miR-21-5p (shifted 1|0)`; the bare id for the wild type. */
+  label: string;
+  /** `WT`, or e.g. `shifted 1|0` / `modified 6:U|A`. */
+  variant: string;
+  is_variant: boolean;
+  /** Nucleotides actually run. */
+  seq: string;
+}
+
 export interface JobResultsResponse {
   job_id: string;
+  view?: "genes" | "compare";
   total_genes: number;
   total: number;
   offset: number;
@@ -298,6 +319,10 @@ export interface JobResultsResponse {
   order: string;
   genes: GeneRecord[];
   venn?: VennData;
+  /** Every record the job ran; absent from older backends. */
+  sequences?: SequenceInfo[];
+  /** The records whose predictions this page shows (the WT records by default). */
+  selected?: string[];
 }
 
 export interface JobResultsParams {
@@ -306,13 +331,68 @@ export interface JobResultsParams {
   ascendOrDescend?: "asc" | "desc";
   offset?: number;
   number?: number;
+  /** Record ids to show (their union); omit for the wild-type records. */
+  sequences?: string[];
+}
+
+export type CompareStatus = "changed" | "lost" | "gained" | "shared";
+
+/** One target of a WT/variant comparison. "Lost" means no longer predicted
+ *  by those tools, not evidence of no binding. */
+export interface CompareRow {
+  gene_id: string;
+  gene_label: string;
+  gene_name: string;
+  status: CompareStatus;
+  wt_tools: string[];
+  variant_tools: string[];
+  /** Tools that predict the target for the variant only. */
+  gained: string[];
+  /** Tools that predict the target for the WT only. */
+  lost: string[];
+  /** `gained.length + lost.length`. */
+  delta: number;
+}
+
+export interface CompareResponse {
+  job_id: string;
+  view: "compare";
+  wt: string;
+  variant: string;
+  /** Targets hit by either record. */
+  total_genes: number;
+  /** Rows after the status/keyword filters. */
+  total: number;
+  /** Targets per status, unfiltered. */
+  totals: Record<CompareStatus, number>;
+  /** Per tool: on how many targets it was gained or lost. */
+  tools: Record<string, { gained: number; lost: number }>;
+  genes: CompareRow[];
+  offset: number;
+  number: number;
+  sort_by: string;
+  order: string;
+  sequences?: SequenceInfo[];
+}
+
+export interface CompareParams {
+  wt: string;
+  variant: string;
+  status?: CompareStatus;
+  keyword?: string;
+  sortBy?: "status" | "gene_label" | "delta";
+  ascendOrDescend?: "asc" | "desc";
+  offset?: number;
+  number?: number;
 }
 
 /** Omit `genes` to enrich the job's own predicted genes; the backend collects
  *  them, which keeps the request small enough for the institutional proxy
- *  (it rejects a full gene list with 413). */
+ *  (it rejects a full gene list with 413). `sequence` picks which of the
+ *  job's records those genes come from (default: the wild type). */
 export interface EnrichmentRunRequest {
   genes?: string[];
+  sequence?: string;
   organism?: string;
   cutoff?: number;
 }

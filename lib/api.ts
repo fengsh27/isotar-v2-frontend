@@ -1,4 +1,6 @@
 import type {
+  CompareParams,
+  CompareResponse,
   CreateJobPayload,
   CreateJobResponse,
   CreateNetworkJobPayload,
@@ -188,10 +190,32 @@ export async function getJobResults(
   if (params.ascendOrDescend) query.set("ascendOrDescend", params.ascendOrDescend);
   if (params.offset !== undefined) query.set("offset", String(params.offset));
   if (params.number !== undefined) query.set("number", String(params.number));
+  for (const sequence of params.sequences ?? []) query.append("sequence", sequence);
 
   const qs = query.toString() ? `?${query.toString()}` : "";
   return fetchJson<JobResultsResponse>(
     `/api/v1/jobs/${encodeURIComponent(jobId)}/result${qs}`,
+  );
+}
+
+/** Classify every target of one variant against its wild type (shared /
+ *  gained / lost / changed). Both ids come from a result's `sequences`. */
+export async function getJobCompare(
+  jobId: string,
+  params: CompareParams,
+): Promise<CompareResponse> {
+  const query = new URLSearchParams();
+  query.set("view", "compare");
+  query.set("wt", params.wt);
+  query.set("variant", params.variant);
+  if (params.status) query.set("status", params.status);
+  if (params.keyword) query.set("keyword", params.keyword);
+  if (params.sortBy) query.set("sortBy", params.sortBy);
+  if (params.ascendOrDescend) query.set("ascendOrDescend", params.ascendOrDescend);
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+  if (params.number !== undefined) query.set("number", String(params.number));
+  return fetchJson<CompareResponse>(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/result?${query.toString()}`,
   );
 }
 

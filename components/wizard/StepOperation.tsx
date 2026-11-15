@@ -200,7 +200,9 @@ export function StepOperation() {
         <h2 className="text-xl font-semibold text-zinc-900">Operations</h2>
         <p className="mt-1 text-sm text-zinc-600">
           Two optional sub-steps in sequence: Shift, then Modification. You may skip either one,
-          or skip both.
+          or skip both. The wild type is always predicted; a shifted or modified sequence is
+          predicted as a separate record, and the results page can compare it against the wild
+          type.
         </p>
       </div>
 
