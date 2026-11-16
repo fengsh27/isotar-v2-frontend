@@ -276,6 +276,22 @@ export function JobStatus({ jobId }: { jobId: string }) {
         />
       ) : null}
 
+      {job?.status === "succeeded"
+        ? (job.warnings ?? []).map((w, i) => (
+            <Alert
+              key={`${w.code}-${i}`}
+              color="warning"
+              variant="flat"
+              title={
+                w.code === "variant_not_applied"
+                  ? `Requested variant not run${w.mirna_id ? ` for ${w.mirna_id}` : ""}`
+                  : "Check these results"
+              }
+              description={w.message}
+            />
+          ))
+        : null}
+
       {job?.status === "succeeded" ? (
         <JobResults jobId={jobId} mirnaId={job.mirna_id} genome={job.genome} workflow={job.workflow} />
       ) : (
