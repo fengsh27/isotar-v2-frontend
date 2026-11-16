@@ -97,8 +97,12 @@ LLM agents MUST respect the following hierarchy:
   (`lib/mirnaData.ts`), which anchors the window on `mature_seq` itself, or
   through `resolvePrecursor` / `resolveShiftedMature`, which already do. Read
   1-based, the human window carries one extra precursor base at the 5′ end.
-  The backend's `apply_shift` reads these fields 0-based and so is wrong for the
-  other nine species — `../isoTar-v2/TODO.md`, item 7
+  The backend's `mirna_processing.py` resolves the window the same way
+  (`anchored_mature_start`, since isoTar-v2 `1ab6543`), so a shifted variant
+  matches the frontend preview for all ten species. Before 2026-11-08 both
+  sides were off by one — the frontend numbered human positions one too high,
+  and the backend cut shifted variants one base 3′ for the nine other species —
+  so older jobs may not have run the variant they asked for
 - A custom mature sequence (17–30 nt, named by the user) may be supplied instead of a catalog ID; it is submitted as `mirna_seq` with the name in `mirna_id`
 - Species-specific interpretation
 
