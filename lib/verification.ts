@@ -64,6 +64,7 @@ export const VERDICT_LABELS: Record<VerdictValue, string> = {
   look_alike: "look-alike symbol",
   editorial_notice: "editorial notice",
   not_accessible: "not accessible",
+  not_read: "not read",
 };
 
 export const VERDICT_COLOR: Record<VerdictValue, ChipColor> = {
@@ -73,6 +74,7 @@ export const VERDICT_COLOR: Record<VerdictValue, ChipColor> = {
   look_alike: "danger",
   editorial_notice: "danger",
   not_accessible: "default",
+  not_read: "danger",
 };
 
 /** One line per verdict class, for the legend and the detail view. */
@@ -85,6 +87,8 @@ export const VERDICT_HELP: Record<VerdictValue, string> = {
   look_alike: "A hit on a different entity with a similar symbol, not the predicted partner.",
   editorial_notice: "The record is a retraction, correction or expression of concern.",
   not_accessible: "The text could not be fetched or read, so nothing can be concluded.",
+  not_read:
+    "The paper could not be fetched or the model call failed, so there is no verdict. The note gives the reason; the next run retries it.",
 };
 
 export const STEP_LABELS: Record<VerificationStep, string> = {
