@@ -1,0 +1,11 @@
+{
+  "name": "isotar-tutorials",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "record:network": "node record-network.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1"
+  }
+}

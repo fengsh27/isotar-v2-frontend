@@ -1,0 +1,133 @@
+import { Callout } from "@/components/docs/Callout";
+import { TutorialVideo } from "@/components/docs/TutorialVideo";
+
+export const metadata = { title: "miR-Network Visualization · isoTar docs" };
+
+# miR-Network Visualization
+
+miR-Network tests ceRNA hypotheses. You give one miRNA and a list of candidate gene–lncRNA pairs;
+isoTar predicts whether the miRNA binds **both** members of each pair, scores every pair it bridges,
+and draws the result as a gene ↔ miRNA ↔ lncRNA network.
+
+Use it when you already have candidate pairs, for example genes and lncRNAs whose expression is
+correlated in your data. To find a miRNA's targets without a hypothesis, use
+[miR-Target](/run?workflow=mir-target) or [miR-LncRNA](/run?workflow=mir-lncrna) instead.
+
+<TutorialVideo
+  name="network-setup"
+  title="Tutorial 1 of 2: setting up a miR-Network job (hsa-miR-141-5p, two ceRNA pairs, hg38). The correlation values are examples."
+/>
+
+## 1. Species
+
+Choose the species; for human, also choose **hg19** or **hg38**. Changing the species later clears
+the selected miRNA.
+
+## 2. One miRNA, and optional variants
+
+Pick **exactly one** miRNA from the catalog. The correlations you enter for each pair refer to this
+miRNA, so a second miRNA would make them ambiguous.
+
+To compare forms of the same miRNA, click **+ Add variant** and enter a shift and/or per-position
+modifications. Each variant becomes its own node in the network next to the wild type (WT), all in
+one job. The WT is always included.
+
+## 3. ceRNA pairs
+
+Paste one pair per line, up to **100 pairs**. Each line has up to five columns:
+
+| Column | Required | Format |
+| --- | --- | --- |
+| Gene | yes | Gene symbol (`TP53`) or RefSeq ID (`NM_000546`) |
+| lncRNA | yes | Ensembl **transcript** ID (`ENST…`) |
+| corr(miRNA, gene) | no | A number from 0 to 1 |
+| corr(miRNA, lncRNA) | no | A number from 0 to 1 |
+| corr(gene, lncRNA) | no | A number from 0 to 1 |
+
+Separate columns with commas or tabs, so you can paste straight from a spreadsheet. For example:
+
+```
+gene,lncRNA,corr_mirna_gene,corr_mirna_lncrna,corr_gene_lncrna
+QKI, ENST00000651976, 0.62, 0.55, 0.71
+FMO2, ENST00000668474, , 0.48, 0.66
+```
+
+- A **header row** as the first line is ignored.
+- **Leave a correlation empty** (keep its comma) and it counts as 1, so that pair is ranked on
+  prediction agreement alone. Above, FMO2's corr(miRNA, gene) is empty.
+- Correlations are **magnitudes**: a negative value is read as its absolute value. A value above 1
+  is rejected.
+- The table under the box, **What will be submitted**, shows exactly how each line was read.
+
+<Callout tone="warning" title="lncRNAs must be Ensembl transcript IDs (ENST…)">
+  Predictions are made per transcript, so isoTar rejects lncRNA **symbols** (`MAGI2-AS3`) and
+  **gene** IDs (`ENSG…`) with "lncRNA ID(s) cannot be used". Use the transcript ID instead.
+</Callout>
+
+**Which transcript should I use?** A lncRNA gene often has many transcripts, and a miRNA may bind only
+some of them.
+
+- If your correlations come from **transcript-level** expression, use those transcripts.
+- If they come from **gene-level** expression, start with the gene's *Ensembl Canonical*
+  transcript, shown in the transcript table of the gene's page on [Ensembl](https://www.ensembl.org).
+- If that pair is not bridged, add the gene's other transcripts as extra lines, each with the same
+  gene and correlations. The result then shows which transcripts the miRNA is predicted to bind.
+
+isoTar checks every gene and lncRNA against the species' reference as you type, and flags any it
+cannot find before you submit.
+
+## 4. Configuration and 5. Review & Run
+
+The default of 8 CPU cores suits almost every job (Advanced settings, collapsed by default). The
+Review step lists the species, miRNA, number of pairs and tools; click **Start Job** to submit.
+
+isoTar always runs **every tool available for the species**: all six on the gene side and five on
+the lncRNA side, where TargetScan does not run. For species without TargetScan (rat, macaque,
+chimpanzee, dog, opossum) the gene side uses five. The tool set is fixed so that scores mean the
+same thing in every job.
+
+## Reading the results
+
+<TutorialVideo
+  name="network-results"
+  title="Tutorial 2 of 2: reading the network, the pair table and the ceRNA score."
+/>
+
+The result shows **only the pairs the miRNA bridges**: the miRNA is predicted, by at least one
+tool, to bind the gene and the lncRNA. A pair you entered that is missing from the result was not
+bridged. That is a prediction result, not an error; see the [FAQ](/docs/faq) for what to try.
+
+Each bridged pair gets a **ceRNA score** between 0 and 1:
+
+```
+score = corr(miRNA, gene) × corr(miRNA, lncRNA) × corr(gene, lncRNA)
+        × √( (gene tools / gene tools run) × (lncRNA tools / lncRNA tools run) )
+```
+
+The first part is your correlations; the square root measures how many of the tools that ran predict
+each side. With all correlations empty, the score is tool agreement alone.
+
+- The pair's score is the **wild type's**. A variant can bridge a pair the WT does not, but it
+  never sets the pair's headline score; it is listed as the pair's best bridge instead.
+- Variants inherit the pair's correlations, so WT-versus-variant differences come entirely from
+  tool agreement.
+- Use **Min. ceRNA score** to hide weaker pairs. The graph and the table always show the same pairs.
+
+The download contains the predictions for **your pairs' targets only**, not the whole genome.
+
+## Literature verification
+
+For human jobs (hg19 or hg38), **Verify against literature** searches PubMed for each bridged axis and
+reports evidence for each of its three arms: miRNA–gene, miRNA–lncRNA and gene–lncRNA.
+
+- **Tier 1** finds both names together with cancer terms for the tissue you chose, **tier 2** with any
+  cancer term, and **tier 3** both names alone. Tiers describe the disease context of the
+  papers, not how strong the evidence is.
+- **Partial** means only some of the three arms were found.
+- **Unsearchable** means the lncRNA has no official gene symbol. Papers do not cite Ensembl IDs, so
+  that arm cannot be searched; this means unknown, not unsupported.
+- A **same-paper** hit is one paper naming all three molecules. Only a model-review verdict of
+  *reported interaction*, shown with the quoted sentence, says that the paper actually reports the
+  axis.
+
+Click a citation to open the paper in PubMed.

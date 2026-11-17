@@ -281,16 +281,27 @@ app/
   network/        → mir-network wizard
   jobs/           → job list
   jobs/[jobId]/   → job status & results (incl. the network graph)
-  docs/, about/   → static pages
+  docs/           → user docs, written as page.mdx (sidebar in components/docs/DocsNav.tsx)
+  about/          → static page
   api/v1/jobs/[jobId]/result/download/   → local Route Handler
 components/
   wizard/         → shared single-miRNA steps
   wizard-network/ → mir-network steps (incl. NetworkVariantsSection)
   job/            → job-detail views (NetworkGraph, VerificationPanel, tables, Venn/UpSet, …)
+  docs/           → docs nav, Callout, TutorialVideo
 lib/              → API client, domain helpers, constants, types (verification.ts: literature helpers)
 stores/           → the two Zustand wizard stores
 data/             → per-species miRNA catalogs (JSON)
+public/videos/    → tutorial clips (.webm + .vtt captions + .jpg poster)
+tutorials/        → Playwright script that records those clips (not in the image)
 ```
+
+The docs restate rules from this file (the ceRNA score, verification tiers,
+TargetScan species, ID formats). When one of those rules changes, update the
+matching page under `app/docs`. When the UI of a recorded flow changes,
+re-record with `tutorials/` (see its README). `mdx-components.tsx` styles the
+Markdown elements; MDX plugins are named as strings in `next.config.ts`
+because `next dev` runs Turbopack.
 
 ### Backend access
 

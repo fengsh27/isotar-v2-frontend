@@ -1,0 +1,45 @@
+WEBVTT
+
+1
+00:00:00.172 --> 00:00:03.805
+miR-Network tests ceRNA hypotheses: does one miRNA bridge your gene–lncRNA pairs?
+
+2
+00:00:03.805 --> 00:00:16.239
+Step 1: choose the species. For human, also choose the genome reference; we use hg38.
+
+3
+00:00:16.239 --> 00:00:29.014
+Step 2: pick exactly one miRNA. Type part of its name to filter the catalog.
+
+4
+00:00:29.014 --> 00:00:36.894
+Optional: add shifted or modified variants to compare with the wild type in the same job.
+
+5
+00:00:36.894 --> 00:00:47.854
+Step 3: paste gene–lncRNA pairs, one per line. lncRNAs must be Ensembl transcript IDs (ENST…).
+
+6
+00:00:47.854 --> 00:00:55.863
+Correlations are optional magnitudes from 0 to 1 (these are example values). An empty column counts as 1.
+
+7
+00:00:55.863 --> 00:01:02.045
+'What will be submitted' shows exactly how each line was read.
+
+8
+00:01:02.045 --> 00:01:07.465
+Step 4: the default settings suit almost every job.
+
+9
+00:01:07.465 --> 00:01:12.148
+Step 5: review the job before starting it.
+
+10
+00:01:12.148 --> 00:01:19.343
+Every tool available for the species runs, so ceRNA scores are comparable between jobs.
+
+11
+00:01:19.343 --> 00:01:28.549
+The job runs in the background. Keep this page's link to come back to the result.
