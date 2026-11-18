@@ -1,0 +1,74 @@
+import { Callout } from "@/components/docs/Callout";
+
+export const metadata = { title: "Getting started · isoTar docs" };
+
+# Getting started
+
+isoTar predicts the targets of a microRNA by running several prediction tools and combining their
+results, so you can see which targets the tools agree on. It also scores candidate ceRNA axes
+(gene ↔ miRNA ↔ lncRNA) and checks them against the published literature.
+
+## Pick a workflow
+
+Each job analyses **one miRNA**. Choose the workflow by the question you are asking:
+
+| Your question | Workflow | You provide |
+| --- | --- | --- |
+| Which genes does my miRNA target? | [miR-Target Prediction](/run?workflow=mir-target) | A miRNA; optionally a list of genes to check |
+| Which lncRNAs does my miRNA target? | [miR-LncRNA Prediction](/run?workflow=mir-lncrna) | A miRNA; optionally a list of lncRNAs to check |
+| Is this gene–lncRNA pair a ceRNA axis through my miRNA? | [miR-Network Visualization](/network) | A miRNA and up to 100 gene–lncRNA pairs |
+
+The first two answer "what does it target?". The network workflow tests hypotheses you already have,
+for example gene–lncRNA pairs whose expression is correlated in your data. See
+[miR-Network Visualization](/docs/mir-network) for a walkthrough and a tutorial video.
+
+## Your first run in five steps
+
+1. **Choose the species.** For human, also choose the genome reference, **hg19** or **hg38**. We
+   recommend hg38, especially for lncRNAs: its lncRNA reference holds about 36,000 lncRNA genes,
+   against about 14,000 for hg19.
+2. **Choose the miRNA** from the catalog for that species (type part of the name, e.g. `miR-21`).
+   In miR-Target and miR-LncRNA you can instead enter your own mature sequence (17–30 nt) with a name.
+3. **Optionally change the miRNA.** A *shift* moves the mature sequence along its precursor; a
+   *modification* changes single positions (e.g. an editing site). isoTar then predicts the
+   wild type and the variant side by side.
+4. **Choose prediction tools** (miR-Target and miR-LncRNA). The network workflow always runs every
+   tool available for the species, so its scores are comparable between jobs.
+5. **Review & Run.** The Review step shows exactly what will be submitted. A submitted job cannot be
+   changed; to try different settings, start a new job.
+
+## Supported species and tools
+
+isoTar covers 10 species: human, mouse, rat, rhesus macaque, chimpanzee, dog, gray short-tailed
+opossum, zebrafish, fruit fly and *C. elegans*.
+
+It runs six prediction tools: **miRanda, miRmap, TargetScan, RNAhybrid, PITA** and **DMISO**.
+TargetScan has two limits, because it scores against its own precomputed 3′ UTR alignments instead
+of isoTar's reference sequences:
+
+- It is available only for **human, mouse, fruit fly, zebrafish** and ***C. elegans***.
+- It never runs on **lncRNAs**: miR-LncRNA jobs and the lncRNA side of network jobs use the other
+  five tools.
+
+## Jobs and results
+
+A job runs in the background; the job page shows each tool's progress and opens the results when it
+finishes. You can close the page and come back later.
+
+<Callout tone="warning" title="Keep your job link">
+  The **Jobs** page lists the jobs submitted from *this browser* only. To open a result on another
+  computer, or to share it with a colleague, keep the job page's link (it ends in the job ID).
+</Callout>
+
+Results depend on the workflow:
+
+- **miR-Target / miR-LncRNA:** a table of predicted targets with the tools that predict each one,
+  and a Venn or UpSet diagram of tool agreement. A job with a variant can be compared with its
+  wild type.
+- **Enrichment** (miR-Target only, for human, mouse and rat): pathway and gene-set enrichment of
+  the predicted target genes.
+- **miR-Network:** a graph of the gene ↔ miRNA ↔ lncRNA pairs the miRNA bridges, ranked by ceRNA
+  score, with optional literature verification.
+
+Every job can be downloaded as a zip of its results. Something not working as expected? Check the
+[FAQ](/docs/faq).

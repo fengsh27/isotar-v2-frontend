@@ -1,3 +1,4 @@
+import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
 import pkg from "./package.json";
@@ -7,6 +8,8 @@ const apiBase = process.env.API_BASE?.replace(/\/$/, "") ?? "http://127.0.0.1:50
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // The user docs under app/docs are written as page.mdx.
+  pageExtensions: ["ts", "tsx", "md", "mdx"],
   // Expose the package.json version to the app (server + browser) at build time
   // so the UI can display which build is running. Kept in sync with the Docker
   // image tag by `npm run release`.
@@ -35,4 +38,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// remark-gfm for tables and task lists, rehype-slug for heading anchors
+// (/docs/mir-network#3-cerna-pairs). Named as strings, not imported:
+// `next dev` runs Turbopack, which cannot serialize plugin functions.
+const withMDX = createMDX({
+  options: {
+    remarkPlugins: [["remark-gfm", {}]],
+    rehypePlugins: [["rehype-slug", {}]],
+  },
+});
+
+export default withMDX(nextConfig);

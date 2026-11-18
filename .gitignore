@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tutorial recorder (tutorials/record-network.mjs)
+/tutorials/node_modules/
+/tutorials/.raw/
