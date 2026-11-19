@@ -8,6 +8,9 @@ command whenever the UI changes. No hand editing.
 |---|---|---|
 | `network-setup` | `/docs/mir-network` | The miR-Network wizard, from species to Start Job |
 | `network-results` | `/docs/mir-network` | The finished job: graph, pair table, ceRNA score, verification |
+| `target-setup` | `/docs/mir-target` | The miR-Target wizard, from species to Start Job |
+| `target-results` | `/docs/mir-target` | Predicted targets: consensus, UpSet, search; starting enrichment |
+| `target-enrichment` | `/docs/mir-target` | Enrichment results: databases, terms, dotplot |
 
 Each clip produces three files in `public/videos/`:
 
@@ -21,11 +24,20 @@ Each clip produces three files in `public/videos/`:
 cd tutorials
 npm install                          # once; Playwright reuses the cached Chromium
 ISOTAR_URL=http://127.0.0.1:9501 npm run record:network
+ISOTAR_URL=http://127.0.0.1:9501 npm run record:target
 ```
 
-The script **submits one real network job** to `ISOTAR_URL` (hsa-miR-141-5p,
-two ceRNA pairs, hg38) and records its result once it finishes. The wait is not
-recorded. A run takes about 3–4 minutes.
+Each script **submits one real job** to `ISOTAR_URL` and records its result once
+it finishes; waits are not recorded.
+
+- `record:network`: hsa-miR-141-5p with two ceRNA pairs on hg38. About 3–4 minutes.
+- `record:target`: hsa-let-7a-5p on hg38 with four tools (miRanda, miRmap,
+  TargetScan, DMISO), then an enrichment run on it. About 12 minutes, most of it
+  the job. RNAhybrid is left out on purpose: it alone takes close to an hour
+  genome-wide.
+
+To redo only the enrichment clip on a job whose enrichment has already run (no
+new job): `JOB_ID=<job id> node record-target.mjs enrichment`.
 
 Environment variables:
 
@@ -36,7 +48,8 @@ Environment variables:
 
 ## Changing a clip
 
-The steps and captions live in `record-network.mjs`: `say()` shows a caption,
+The steps and captions live in `record-network.mjs` and `record-target.mjs`; the
+shared cursor, caption and clip helpers are in `clip.mjs`. `say()` shows a caption,
 and `moveTo()` / `click()` / `type()` animate the cursor. After a UI change,
 update the locators (button names, labels), re-record, then check the result on
 `/docs/mir-network`. The example correlations are illustrative, and the captions

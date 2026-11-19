@@ -1,0 +1,49 @@
+WEBVTT
+
+1
+00:00:00.182 --> 00:00:05.463
+miR-Target predicts the genes a miRNA targets with several tools, and shows where the tools agree.
+
+2
+00:00:05.463 --> 00:00:18.006
+Step 1: choose the species. For human, also choose the genome reference; we use hg38.
+
+3
+00:00:18.006 --> 00:00:30.096
+Step 2: pick the miRNA from the catalog. Type part of its name to filter.
+
+4
+00:00:30.096 --> 00:00:36.304
+The summary shows the mature sequence and where it sits on its precursor.
+
+5
+00:00:36.304 --> 00:00:42.857
+Or choose Custom Sequence to paste your own mature sequence (17–30 nt).
+
+6
+00:00:42.857 --> 00:00:49.505
+Step 3 (optional): shift the mature sequence along its precursor, or change single bases.
+
+7
+00:00:49.505 --> 00:01:04.140
+Each variant is predicted alongside the wild type and can be compared with it. We keep the wild type here.
+
+8
+00:01:04.140 --> 00:01:16.048
+Step 4: choose the prediction tools. More tools give a stronger consensus.
+
+9
+00:01:16.048 --> 00:01:25.917
+To keep this example quick we choose four. RNAhybrid takes the longest on a genome-wide run.
+
+10
+00:01:25.917 --> 00:01:33.441
+Step 5: optionally limit predictions to genes you name. We predict genome-wide, which enrichment needs.
+
+11
+00:01:33.441 --> 00:01:40.175
+Step 6: review the job, then start it.
+
+12
+00:01:40.175 --> 00:01:47.616
+The job runs in the background and shows each tool's progress. Keep this page's link to come back.
