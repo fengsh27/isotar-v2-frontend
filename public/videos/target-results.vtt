@@ -1,0 +1,37 @@
+WEBVTT
+
+1
+00:00:04.157 --> 00:00:10.206
+Consensus: how many targets at least 1, 2, 3 … of the tools predict.
+
+2
+00:00:10.206 --> 00:00:19.592
+The UpSet plot shows which tools agree: each column is one combination of tools.
+
+3
+00:00:19.592 --> 00:00:26.250
+Search by gene symbol, gene name or tool. HMGA2 is a well-known let-7 target.
+
+4
+00:00:26.250 --> 00:00:35.377
+Each row lists the tools that predict the target.
+
+5
+00:00:35.377 --> 00:00:42.010
+Targets are sorted by how many tools predict them, so the best-supported come first.
+
+6
+00:00:42.010 --> 00:00:46.847
+Download every prediction as a zip.
+
+7
+00:00:46.847 --> 00:00:56.403
+Enrichment tests the predicted genes against pathway and gene-set databases (human, mouse and rat).
+
+8
+00:00:56.403 --> 00:01:06.307
+The organism follows the job's species. Keep the adjusted P-value cutoff at 0.05 and run.
+
+9
+00:01:06.307 --> 00:01:09.937
+Enrichment runs in the background and usually takes about a minute.

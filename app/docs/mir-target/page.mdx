@@ -1,0 +1,144 @@
+import { Callout } from "@/components/docs/Callout";
+import { TutorialVideo } from "@/components/docs/TutorialVideo";
+
+export const metadata = { title: "miR-Target Prediction · isoTar docs" };
+
+# miR-Target Prediction
+
+miR-Target predicts which genes a miRNA targets. isoTar runs the prediction tools you choose against
+the 3′ UTRs of the species, lists every predicted target with the tools that predict it, and shows
+where the tools agree. For human, mouse and rat it can then test the predicted genes for pathway and
+gene-set enrichment.
+
+<TutorialVideo
+  name="target-setup"
+  title="Tutorial 1 of 3: setting up a miR-Target job (hsa-let-7a-5p, hg38, four tools)."
+/>
+
+## 1. Species
+
+Choose the species; for human, also choose **hg19** or **hg38**.
+
+## 2. miRNA
+
+- **From Catalog:** type part of the name (e.g. `let-7a`) and pick the miRNA. Where it comes from
+  more than one precursor, choose the precursor record. The **miRNA Summary** shows the mature
+  sequence and where it sits on the precursor.
+- **Custom Sequence:** paste your own mature sequence (17–30 nt) and give it a name. A custom
+  sequence has no precursor, so the Operation step is skipped.
+
+## 3. Operation (optional)
+
+Change the miRNA to study an isomiR or an edited form. Both sub-steps are optional:
+
+- **Shift** moves the ends of the mature sequence along its precursor. A negative value extends it
+  towards the 5′ (left) side, a positive value towards the 3′ (right) side.
+- **Modification** changes single bases: give the position on the mature sequence (1-based, counted
+  after any shift) and the new base.
+
+The wild type is always predicted too. The variant is predicted as a separate record, and the
+results can compare the two (see [Variants](#variants-wild-type-versus-variant)).
+
+## 4. Prediction tools
+
+Choose one or more of **miRanda, miRmap, TargetScan, RNAhybrid, PITA** and **DMISO**. Targets predicted
+by several independent tools are usually more reliable, so choose several.
+
+- **TargetScan** is available only for human, mouse, fruit fly, zebrafish and *C. elegans*.
+- **Run time** depends mostly on the tools. Genome-wide, miRanda, TargetScan and DMISO take seconds to
+  a few minutes, miRmap and PITA several minutes, and **RNAhybrid** can take close to an hour.
+
+## 5. Configuration
+
+The defaults suit almost every job. Two optional cards:
+
+- **Advanced settings:** CPU cores and other run settings.
+- **Select Target:** restrict the predictions to genes you name, as gene symbols (`TP53`) or RefSeq
+  IDs (`NM_000546`), one per line or comma-separated. isoTar checks each name against the species'
+  reference and marks any it cannot find ("not found"); fix or remove those to continue.
+
+<Callout tone="note" title="Leave Select Target empty for enrichment">
+  Enrichment tests the job's predicted genes against whole gene-set databases. It needs a
+  genome-wide prediction, not a handful of genes.
+</Callout>
+
+## 6. Review & Run
+
+The Review step shows exactly what will be submitted. Click **Start Job**; the job page then shows
+each tool's progress.
+
+## Reading the results
+
+<TutorialVideo
+  name="target-results"
+  title="Tutorial 2 of 3: reading the predicted targets, and starting an enrichment analysis."
+/>
+
+The **Predicted Targets** tab has three parts:
+
+- **Consensus:** how many targets are predicted by at least 1, 2, 3 … of the tools. The number
+  shrinks as you ask for more agreement.
+- **Tool overlap (UpSet):** each column is one combination of tools, and its bar counts the targets
+  predicted by exactly that combination. The largest 20 combinations are shown.
+- **The target table:** one row per target transcript, with its gene symbol, the tools that predict
+  it, the gene name and RefSeq ID. It is sorted by the number of tools; click a column header to
+  re-sort, and use the filter box to search by gene symbol, gene name or tool.
+
+**Download Results (.zip)** saves every prediction for offline analysis.
+
+### Variants: wild type versus variant
+
+A job with a shift or modification shows a record selector above the table. Pick a record to see its
+targets alone, or choose **vs WT** to compare a variant with the wild type. Every target is then
+classed as:
+
+| Class | Meaning |
+| --- | --- |
+| Shared | Predicted for both, by the same tools |
+| Changed | Predicted for both, by a different set of tools |
+| Gained | Predicted for the variant only |
+| Lost | Predicted for the wild type only |
+
+"Lost" means the variant is **no longer predicted** to bind that target. It is not evidence that the
+variant does not bind it.
+
+## Enrichment analysis
+
+<TutorialVideo
+  name="target-enrichment"
+  title="Tutorial 3 of 3: reading the enrichment results."
+/>
+
+Enrichment asks which pathways and gene sets are over-represented among the predicted target genes.
+It is available for **miR-Target jobs on human, mouse and rat**. isoTar submits the predicted genes
+to [Enrichr](https://maayanlab.cloud/Enrichr/).
+
+1. Open the **Enrichment** tab of a finished job and click **Run Enrichment Analysis**.
+2. The **organism** is set by the job's species. Choose the **adjusted P-value cutoff** (default
+   0.05) and click **Run**.
+3. Enrichment runs in the background and usually takes about a minute. You can leave the page and
+   come back.
+
+For a job with a variant, enrichment uses the wild type's predicted genes.
+
+**Reading the results.** A summary line records how many genes were submitted, the organism and the
+cutoff. Each tab is one database: **GO Biological Process, GO Cellular Component, GO Molecular
+Function, KEGG** and **Reactome**. In each table:
+
+| Column | Meaning |
+| --- | --- |
+| Term | The pathway or gene set |
+| Overlap | Predicted genes in the term / all genes in the term |
+| Adjusted P-value | Significance after correction for multiple testing; the table starts with the smallest |
+| Combined score | Enrichr's score: log P-value × z-score of the deviation from the expected rank; higher is stronger |
+| Genes | The predicted target genes in the term |
+
+The **dotplot** shows the top GO Biological Process terms. A dot further right is more significant
+(−log10 of the adjusted P-value), a bigger dot has more genes, and its colour gives the combined
+score.
+
+Click **Re-run Enrichment** to try another cutoff. The latest results are saved with the job and
+included in its download.
+
+If enrichment fails, the tab shows the error. Check the cutoff and run it again; if it keeps
+failing, send us the job ID.
