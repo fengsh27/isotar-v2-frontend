@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.13](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.12...v0.2.13) (2026-11-21)
+
+
+### Bug Fixes
+
+* **verification:** show not_read verdicts with their reason ([a33d065](https://github.com/fengsh27/isotar-v2-frontend/commit/a33d0658a7d9e131913d783b913552b8b94c73db))
+
 ### [0.2.12](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.11...v0.2.12) (2026-11-19)
 
 
