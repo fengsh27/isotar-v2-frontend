@@ -90,19 +90,21 @@ LLM agents MUST respect the following hierarchy:
 - Example: `hsa-miR-495-3p`
 - Validated against authoritative sources (e.g., miRBase)
 - The per-species catalog is bundled client-side as `data/<genome>_mature_pre_mirna_ext.json` (human uses the unprefixed file) and loaded through `lib/mirnaData.ts`. Location fields are inconsistently typed across species files, so every record goes through `normalizeRecord`; precursor sequence resolution falls back `ext_pre_seq → pre_seq → mature_seq`
-- ⚠️ The extended mature coordinates also disagree **by convention**:
-  `ext_mature_loc_start` is 0-based in the human file and 1-based inclusive in
-  the nine others (`ext_mature_loc_end` reads the same either way). Never read
-  `ext_mature_loc_start` directly — go through `extMatureWindow`
-  (`lib/mirnaData.ts`), which anchors the window on `mature_seq` itself, or
-  through `resolvePrecursor` / `resolveShiftedMature`, which already do. Read
-  1-based, the human window carries one extra precursor base at the 5′ end.
-  The backend's `mirna_processing.py` resolves the window the same way
-  (`anchored_mature_start`, since isoTar-v2 `1ab6543`), so a shifted variant
-  matches the frontend preview for all ten species. Before 2026-11-08 both
-  sides were off by one — the frontend numbered human positions one too high,
-  and the backend cut shifted variants one base 3′ for the nine other species —
-  so older jobs may not have run the variant they asked for
+- The extended mature coordinates differ **by convention** between catalog
+  files: `ext_mature_loc_start` is 0-based in the human file and 1-based
+  inclusive in the nine others (`ext_mature_loc_end` reads the same either way).
+  This is a property of the data, not a bug in the code: both sides neutralise
+  it by anchoring the window on `mature_seq` itself — `extMatureWindow`
+  (`lib/mirnaData.ts`, used by `resolvePrecursor` / `resolveShiftedMature`) here,
+  `anchored_mature_start` in the backend's `mirna_processing.py` — so a shifted
+  variant matches the frontend preview for all ten species. Read 1-based, the
+  human window carries one extra precursor base at the 5′ end. The one rule this
+  leaves is: never read `ext_mature_loc_start` directly, go through those
+  helpers. History: fixed 2026-11-08 on both sides (frontend `e1ed0bb`, released
+  0.2.7; backend `1ab6543`, released 0.3.29). Before that the frontend numbered
+  human positions one too high and the backend cut shifted variants one base 3′
+  for the nine other species, so jobs run before that date may not have run the
+  variant they asked for
 - A custom mature sequence (17–30 nt, named by the user) may be supplied instead of a catalog ID; it is submitted as `mirna_seq` with the name in `mirna_id`
 - Species-specific interpretation
 
