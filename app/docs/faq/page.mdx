@@ -1,0 +1,65 @@
+export const metadata = { title: "FAQ & troubleshooting · isoTar docs" };
+
+# FAQ & troubleshooting
+
+## "lncRNA ID(s) cannot be used"
+
+The lncRNA column of a ceRNA pair takes **Ensembl transcript IDs** (`ENST…`). This message appears
+when you enter:
+
+- a lncRNA **symbol**, such as `MAGI2-AS3`, `PELATON` or `LINC01614`; or
+- a lncRNA **gene** ID, such as `ENSG00000234456`. Predictions are made per transcript, so a gene ID
+  matches nothing.
+
+Look the lncRNA up on [Ensembl](https://www.ensembl.org) and use one of its transcript IDs. See
+[Which transcript should I use?](/docs/mir-network#3-cerna-pairs)
+
+## "gene(s) are not in the reference for this species"
+
+The gene symbol or RefSeq ID was not found in the 3′ UTR reference of the species and genome you
+chose. Check the spelling, use the official symbol rather than an alias, and make sure the species
+is right (`TP53` is human, `Trp53` is mouse).
+
+## My network result is empty, or some of my pairs are missing
+
+A pair appears only when the miRNA is predicted to bind **both** the gene and the lncRNA. A missing
+pair is a prediction result, not an error. Things to try:
+
+- **Try the lncRNA's other transcripts.** A miRNA often binds only some of a lncRNA's transcripts.
+  Add each transcript as its own line with the same gene.
+- **Check that the pair belongs to this miRNA.** A pair from a study of a different miRNA tests a
+  different hypothesis.
+- **Check each side alone.** Run [miR-Target](/run?workflow=mir-target) with the gene, or
+  [miR-LncRNA](/run?workflow=mir-lncrna) with the lncRNA, to see which side is not predicted.
+
+## Should I use hg19 or hg38?
+
+Use **hg38** unless your data are aligned to hg19. The two references have different transcript
+sets, so a transcript ID from one may be missing from the other, and the hg38 lncRNA reference is
+much larger (about 36,000 lncRNA genes, against about 14,000 for hg19). Use the same genome for every
+job you want to compare.
+
+## Why can't I choose TargetScan?
+
+TargetScan scores against its own precomputed 3′ UTR alignments, so it is available only for
+human, mouse, fruit fly, zebrafish and *C. elegans*, and never for lncRNAs.
+
+## Why does a network job take only one miRNA?
+
+The correlations you enter, corr(miRNA, gene) and corr(miRNA, lncRNA), refer to one miRNA. To compare
+forms of that miRNA, add **variants** in the same job. To test another miRNA, start another job.
+
+## My correlations are negative. Can I use them?
+
+Yes. Correlations are read as magnitudes, so −0.6 counts as 0.6. The **What will be submitted**
+table shows the conversion. Values above 1 are rejected.
+
+## I can't find my jobs on another computer
+
+The **Jobs** page lists the jobs submitted from the current browser only. Keep each job page's link,
+which ends in the job ID; it opens the result from any computer.
+
+## A job failed or looks wrong
+
+Note the **job ID** at the top of the job page and send it to us with a short description. The job
+ID lets us trace exactly what ran.

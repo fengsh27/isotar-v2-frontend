@@ -61,14 +61,6 @@ export default function Home() {
           >
             Read documentation
           </Button>
-          <Button
-            onPress={() =>
-              window.open("https://pubmed.ncbi.nlm.nih.gov/30874918/", "_blank", "noopener,noreferrer")
-            }
-            className="h-11 rounded-xl border border-zinc-300 bg-white/90 px-5 font-semibold text-zinc-800 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:bg-zinc-50 active:scale-[0.98]"
-          >
-            View paper
-          </Button>
         </div>
       </section>
 

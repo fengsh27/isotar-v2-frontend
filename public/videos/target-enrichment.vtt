@@ -1,0 +1,25 @@
+WEBVTT
+
+1
+00:00:05.281 --> 00:00:12.091
+The summary line records how many genes went in, the organism and the cutoff.
+
+2
+00:00:12.091 --> 00:00:20.714
+Each tab is one database. The table lists the enriched terms, most significant first.
+
+3
+00:00:20.714 --> 00:00:25.830
+Switch tabs to see the terms from another database.
+
+4
+00:00:25.830 --> 00:00:31.221
+The Genes column lists the predicted targets behind each term.
+
+5
+00:00:31.221 --> 00:00:40.016
+The dotplot shows the top GO Biological Process terms: further right is more significant, a bigger dot means more genes.
+
+6
+00:00:40.016 --> 00:00:44.971
+Re-run with a different cutoff at any time; the results are saved with the job.
