@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.14](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.13...v0.2.14) (2026-11-22)
+
+
+### Features
+
+* **docs:** add "Run isoTar locally" page and source links on About ([725e19f](https://github.com/fengsh27/isotar-v2-frontend/commit/725e19f2271b9a04c4c9b5fa71d4c5188a70b44e))
+
 ### [0.2.13](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.12...v0.2.13) (2026-11-21)
 
 
