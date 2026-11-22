@@ -7,6 +7,7 @@ export const DOCS_PAGES = [
   { href: "/docs", label: "Getting started" },
   { href: "/docs/mir-target", label: "miR-Target & enrichment" },
   { href: "/docs/mir-network", label: "miR-Network Visualization" },
+  { href: "/docs/deployment", label: "Run isoTar locally" },
   { href: "/docs/faq", label: "FAQ & troubleshooting" },
   { href: "/docs/citation", label: "Citation" },
 ] as const;
