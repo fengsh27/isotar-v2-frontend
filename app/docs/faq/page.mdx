@@ -14,9 +14,22 @@ when you enter:
 Look the lncRNA up on [Ensembl](https://www.ensembl.org) and use one of its transcript IDs. See
 [Which transcript should I use?](/docs/mir-network#3-cerna-pairs)
 
+## "RefSeq IDs aren't accepted here"
+
+miR-Target's **Select Target** card takes gene labels (`TP53`) and Ensembl gene or transcript IDs
+(`ENSG00000141510`, `ENST00000269305`). Replace the RefSeq ID (`NM_000546`) with its gene label or
+Ensembl gene ID; either selects every RefSeq isoform of the gene. See
+[Configuration](/docs/mir-target#5-configuration).
+
+## Select Target: "Ensembl transcript not found, or it has no exact RefSeq equivalent"
+
+isoTar predicts on RefSeq 3′ UTRs, so an Ensembl transcript ID is used only when one RefSeq
+transcript is its exact equivalent. Many Ensembl transcripts have none. Enter the gene instead (its
+Ensembl gene ID or gene label), which selects all of the gene's RefSeq isoforms.
+
 ## "gene(s) are not in the reference for this species"
 
-The gene symbol or RefSeq ID was not found in the 3′ UTR reference of the species and genome you
+The gene symbol or RefSeq ID of a ceRNA pair was not found in the 3′ UTR reference of the species and genome you
 chose. Check the spelling, use the official symbol rather than an alias, and make sure the species
 is right (`TP53` is human, `Trp53` is mouse).
 

@@ -20,7 +20,7 @@ components (`components/wizard-network/`); it is never reachable from `/run`.
 
 Workflow-specific details:
 
-- **`mir-target` / `mir-lncrna`** share a 6-step single-miRNA sequence. The Configuration step exposes an optional **Select Target** card for filtering predictions to specific gene labels / RefSeq IDs (`mir-target`) or Ensembl / FlyBase / WormBase IDs (`mir-lncrna`).
+- **`mir-target` / `mir-lncrna`** share a 6-step single-miRNA sequence. The Configuration step exposes an optional **Select Target** card for filtering predictions to specific gene labels / Ensembl, FlyBase or WormBase gene or transcript IDs (`mir-target`; RefSeq IDs are refused here though the backend API still takes them) or Ensembl / FlyBase / WormBase IDs (`mir-lncrna`).
 - The **miRNA step** of both offers two input modes: pick a catalog miRNA for the chosen species, or enter a **custom sequence** (`useCustomMirnaSeq`). Custom mode requires both a name and a mature sequence of 17–30 nt, and the wizard **skips the Operation step** entirely (`next()`/`back()` jump by 2 between miRNA and Tools) — there is no precursor to shift or modify against.
 - **`mir-network`** runs **exactly one** miRNA (`MAX_NETWORK_MIRNAS` = 1) against both the gene and lncRNA target pools, scores the supplied ceRNA pairs, and renders the result as a tripartite Cytoscape graph. One miRNA, not several, because each pair carries `corr(miRNA, gene)` and `corr(miRNA, lncRNA)` — a second miRNA would make every pasted correlation ambiguous. This is far stricter than the backend's `ISOTAR_MAX_NETWORK_MIRNAS` (default 20), which still rejects anything above its own limit. Its **Select miRNA** step hosts the **Variants** editor: any number of variants (shift and/or per-position modifications) of that one miRNA, compared against the WT prediction in a single job. There is no dedicated Operation step — variant operations live inline with miRNA selection.
 - **`mir-network` has no Tools step.** It always runs every tool available for the species: all six on the gene pool, five on the lncRNA pool (TargetScan is excluded there), minus TargetScan entirely on the five species with no TargetScan release. The set is fixed because the ceRNA score divides by the tools actually run — a user-varied tool list would make scores incomparable between jobs. Use `networkToolsForSpecies` / `networkToolTotals` (`lib/constants.ts`), which mirror the backend's `_network_tool_totals`.
@@ -224,7 +224,7 @@ Single-miRNA workflows (`mir-target`, `mir-lncrna`):
 | `modifications` | string[] | when modification operation is set |
 | `shift` | string | when shift operation is set |
 | `pre_id` | string | when a specific precursor is chosen (never in custom-sequence mode) |
-| `targets` | string[] | when target IDs are specified (both `mir-target` and `mir-lncrna`) |
+| `targets` | string[] | when target IDs are specified (both `mir-target` and `mir-lncrna`). For `mir-target` the backend resolves a gene label or Ensembl gene ID to every RefSeq isoform of the gene and an Ensembl transcript ID to its exact RefSeq twin only (no twin → 400 with a reason, never widened to the gene); `POST /api/v1/targets/validate` returns the same resolution per entry (`matched_by`, `symbol`, `refseq_count`, `reason`), which the Select Target card displays |
 
 Network workflow (`mir-network`):
 
@@ -348,7 +348,7 @@ Wizard state is held in **Zustand**, split by workflow family. Both stores are e
   * `useCustomMirnaSeq`, `customMirnaSeq`, `customMirnaName` — custom-sequence mode; when on, `preId` is not submitted and the Operation step is skipped
   * `operationSubstep` (`"shift" | "modification"`), `modifications: ModificationInput[]`, `shiftLeft`, `shiftRight` — the raw operation editor state. There is **no** single `operation` field; the operation type is derived by `evaluateOperationState` (`lib/operation.ts`)
   * `tools`
-  * `targetGeneIds` — free-text string; newline- or comma-separated gene labels (e.g. `TP53`) or RefSeq IDs (e.g. `NM_000546`) for `mir-target`, or Ensembl / FlyBase / WormBase IDs for `mir-lncrna`
+  * `targetGeneIds` — free-text string; newline- or comma-separated gene labels (e.g. `TP53`) or Ensembl gene / transcript IDs (e.g. `ENSG00000141510`, `ENST00000269305`; `FBgn`/`FBtr`, `WBGene` for fly and worm) for `mir-target` — RefSeq IDs are rejected by `findMalformedTargets` and `toJobPayload`, or Ensembl / FlyBase / WormBase IDs for `mir-lncrna`
   * `config` — `{ cores, maxRuntime, outputFormat }`
 * ⚠️ There is exactly **one** store instance for both single-miRNA workflows, so
   switching workflows carries state across and can clobber it. This is a known
