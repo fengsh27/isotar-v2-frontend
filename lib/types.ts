@@ -447,9 +447,12 @@ export interface EnrichmentResult {
 /** A problem with a succeeded job's results that the user must know about.
  *  `variant_not_applied`: a requested shift/modification never ran (the job
  *  predates submit-time validation), so the results are wild type, or the
- *  variant is missing part of what was asked. */
+ *  variant is missing part of what was asked.
+ *  `targetscan_wrong_species`: a non-human job whose TargetScan ran on human
+ *  3' UTR data (before per-species datasets), so its TargetScan targets are
+ *  human genes; the other tools are unaffected. */
 export interface JobWarning {
-  code: "variant_not_applied" | string;
+  code: "variant_not_applied" | "targetscan_wrong_species" | string;
   mirna_id?: string;
   requested?: { modifications: string[]; shift: string | null };
   missing?: { modifications: string[]; shift: string | null };

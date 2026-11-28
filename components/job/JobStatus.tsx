@@ -285,7 +285,9 @@ export function JobStatus({ jobId }: { jobId: string }) {
               title={
                 w.code === "variant_not_applied"
                   ? `Requested variant not run${w.mirna_id ? ` for ${w.mirna_id}` : ""}`
-                  : "Check these results"
+                  : w.code === "targetscan_wrong_species"
+                    ? "TargetScan results are from the wrong species"
+                    : "Check these results"
               }
               description={w.message}
             />
