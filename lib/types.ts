@@ -185,9 +185,13 @@ export interface MirnaValidationResponse {
   };
 }
 
+// "symbol" / "ensembl_gene" / "ensembl_transcript" / "accession" come from
+// gene validation; "transcript" / "gene" from lncRNA validation.
 export type TargetMatchedBy =
   | "symbol"
   | "accession"
+  | "ensembl_gene"
+  | "ensembl_transcript"
   | "transcript"
   | "gene"
   | null;
@@ -196,6 +200,12 @@ export interface TargetValidationResult {
   target: string;
   valid: boolean;
   matched_by: TargetMatchedBy;
+  /** Gene validation only (backend with ensembl_lookup): the gene symbol(s)
+   *  the target resolved to, how many RefSeq records it selects, and why an
+   *  invalid target was rejected. Absent from older backends. */
+  symbol?: string | null;
+  refseq_count?: number;
+  reason?: string | null;
 }
 
 export interface TargetValidationResponse {

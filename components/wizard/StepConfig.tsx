@@ -5,11 +5,34 @@ import { Accordion, AccordionItem, Alert, Button, Chip, Input, Textarea } from "
 
 import { validateTargets } from "@/lib/api";
 import { MAX_CORES_PER_JOB, SPECIES_OPTIONS } from "@/lib/constants";
-import { findMalformedTargets, parseTargets } from "@/lib/targets";
+import {
+  findMalformedTargets,
+  findRefSeqTargets,
+  geneTargetExamples,
+  parseTargets,
+} from "@/lib/targets";
 import type { TargetValidationResult } from "@/lib/types";
 import { useWizardStore } from "@/stores/wizardStore";
 
 const MAX_TARGETS = 100;
+
+const MATCH_LABEL: Partial<Record<NonNullable<TargetValidationResult["matched_by"]>, string>> = {
+  symbol: "gene label",
+  ensembl_gene: "Ensembl gene",
+  ensembl_transcript: "Ensembl transcript",
+  accession: "RefSeq",
+};
+
+/** "Ensembl gene → TP53 · 25 RefSeq isoforms", or the backend's reason. */
+function describeResolution(r: TargetValidationResult): string {
+  if (!r.valid) return r.reason || "not found";
+  const parts = [r.matched_by ? MATCH_LABEL[r.matched_by] ?? r.matched_by : "found"];
+  if (r.symbol) parts[0] += ` → ${r.symbol}`;
+  if (r.refseq_count !== undefined) {
+    parts.push(`${r.refseq_count} RefSeq isoform${r.refseq_count === 1 ? "" : "s"}`);
+  }
+  return parts.join(" · ");
+}
 
 export function StepConfig() {
   const cores = useWizardStore((state) => state.config.cores);
@@ -87,6 +110,8 @@ export function StepConfig() {
     }
   }
 
+  const ex = geneTargetExamples(genome);
+  const exampleIds = [ex.geneId, ex.transcriptId].filter(Boolean).join(" / ");
   const targetCopy = isLncrnaWorkflow
     ? {
         sectionTitle: "Select Target (optional)",
@@ -101,18 +126,20 @@ export function StepConfig() {
       }
     : {
         sectionTitle: "Select Target (optional)",
-        sectionSubtitle:
-          "Filter by gene label (e.g. TP53) or RefSeq ID (e.g. NM_000546)",
-        textareaLabel: "Gene Labels / Gene IDs",
-        placeholder: "TP53\nNM_000546\nBRCA1",
-        description: `One target per line (or comma-separated). Gene labels (e.g. TP53) or RefSeq IDs starting with NM (e.g. NM_000546). Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
-        malformedTitleSuffix: "look like a gene symbol or NM_ ID",
+        sectionSubtitle: `Filter by gene label (e.g. ${ex.symbol}) or Ensembl ID (e.g. ${ex.geneId})`,
+        textareaLabel: "Gene Labels / Ensembl IDs",
+        placeholder: [ex.symbol, ex.geneId, ex.transcriptId].filter(Boolean).join("\n"),
+        description: `One target per line (or comma-separated). Gene labels (e.g. ${ex.symbol}) or Ensembl IDs (e.g. ${exampleIds}). A gene label or gene ID selects every RefSeq isoform of the gene; a transcript ID selects only its exact RefSeq equivalent. Up to ${MAX_TARGETS} targets. Leave blank to run against all predicted targets.`,
+        malformedTitleSuffix: "look like a gene label or Ensembl ID",
         notFoundHint:
-          "Remove or replace not-found targets before continuing. Only gene symbols (e.g. TP53) and RefSeq IDs (e.g. NM_000546) present in the reference are accepted.",
+          "Remove or replace not-found targets before continuing. Only gene labels and Ensembl gene / transcript IDs present in this species' reference are accepted.",
       };
 
   const targetCount = parseTargets(targetGeneIds).length;
   const malformedTargets = findMalformedTargets(targetGeneIds, targetType);
+  // RefSeq accessions get their own message; the generic one would not say why.
+  const refseqTargets = isLncrnaWorkflow ? [] : findRefSeqTargets(targetGeneIds);
+  const otherMalformed = malformedTargets.filter((t) => !refseqTargets.includes(t));
   const tooManyTargets = targetCount > MAX_TARGETS;
   const validCount = validationResults?.filter((r) => r.valid).length ?? 0;
   const invalidCount = (validationResults?.length ?? 0) - validCount;
@@ -121,6 +148,11 @@ export function StepConfig() {
   // can't know about not-found without a Check Validation click, but any
   // known invalidity is enough to gate the Next button.
   const hasInvalidTargets = malformedTargets.length > 0 || invalidCount > 0;
+  // Gene validation on a current backend says what each target resolved to;
+  // lncRNA validation and older backends return only valid / not found.
+  const hasResolutionDetail =
+    !isLncrnaWorkflow &&
+    (validationResults ?? []).some((r) => r.refseq_count !== undefined || r.reason);
 
   return (
     <section className="space-y-6">
@@ -264,17 +296,32 @@ export function StepConfig() {
                 </Alert>
               )}
 
-              {malformedTargets.length > 0 && (
+              {refseqTargets.length > 0 && (
                 <Alert
                   color="danger"
                   variant="flat"
-                  title={`${malformedTargets.length} ${
-                    malformedTargets.length === 1 ? "entry doesn't" : "entries don't"
+                  title={`RefSeq IDs aren't accepted here (${refseqTargets.length})`}
+                >
+                  <span className="text-xs">
+                    {refseqTargets.slice(0, 5).map((t) => `"${t}"`).join(", ")}
+                    {refseqTargets.length > 5 ? ", …" : ""}. Use the gene label
+                    (e.g. {ex.symbol}) or its Ensembl gene ID (e.g. {ex.geneId})
+                    instead.
+                  </span>
+                </Alert>
+              )}
+
+              {otherMalformed.length > 0 && (
+                <Alert
+                  color="danger"
+                  variant="flat"
+                  title={`${otherMalformed.length} ${
+                    otherMalformed.length === 1 ? "entry doesn't" : "entries don't"
                   } ${targetCopy.malformedTitleSuffix}`}
                 >
                   <span className="text-xs">
-                    {malformedTargets.slice(0, 5).map((t) => `"${t}"`).join(", ")}
-                    {malformedTargets.length > 5 ? ", …" : ""}. Fix or remove these
+                    {otherMalformed.slice(0, 5).map((t) => `"${t}"`).join(", ")}
+                    {otherMalformed.length > 5 ? ", …" : ""}. Fix or remove these
                     entries before continuing.
                   </span>
                 </Alert>
@@ -296,18 +343,33 @@ export function StepConfig() {
                       </Chip>
                     )}
                   </div>
-                  <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
-                    {validationResults.map((r, i) => (
-                      <Chip
-                        key={`${r.target}-${i}`}
-                        size="sm"
-                        variant="flat"
-                        color={r.valid ? "success" : "danger"}
-                      >
-                        {r.target}
-                      </Chip>
-                    ))}
-                  </div>
+                  {hasResolutionDetail ? (
+                    <ul className="max-h-60 space-y-1 overflow-y-auto text-xs">
+                      {validationResults.map((r, i) => (
+                        <li key={`${r.target}-${i}`} className="flex flex-wrap items-baseline gap-x-2">
+                          <Chip size="sm" variant="flat" color={r.valid ? "success" : "danger"}>
+                            {r.target}
+                          </Chip>
+                          <span className={r.valid ? "text-zinc-600" : "text-red-700"}>
+                            {describeResolution(r)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto">
+                      {validationResults.map((r, i) => (
+                        <Chip
+                          key={`${r.target}-${i}`}
+                          size="sm"
+                          variant="flat"
+                          color={r.valid ? "success" : "danger"}
+                        >
+                          {r.target}
+                        </Chip>
+                      ))}
+                    </div>
+                  )}
                   {invalidCount > 0 && (
                     <p className="text-xs text-zinc-500">{targetCopy.notFoundHint}</p>
                   )}
