@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.16](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.15...v0.2.16) (2026-11-28)
+
+
+### Features
+
+* **results:** show Ensembl gene and transcript ids in target tables ([c7966ff](https://github.com/fengsh27/isotar-v2-frontend/commit/c7966ff0c1824a16a3c34c69d5d2cfef679cc140))
+
 ### [0.2.15](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.14...v0.2.15) (2026-11-28)
 
 
