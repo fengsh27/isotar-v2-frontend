@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input, Spinner } from "@heroui/react";
 
+import { EnsemblIdCell, GeneLabelCell, hasEnsemblIds } from "@/components/job/TargetIds";
 import { getJobCompare } from "@/lib/api";
 import type { CompareResponse, CompareStatus, SequenceInfo } from "@/lib/types";
 
@@ -163,6 +164,10 @@ export function CompareTable({ jobId, wt, variant }: Props) {
   }
 
   const total = data?.total ?? 0;
+  // Ensembl gene / transcript columns replace the raw target id (RefSeq for
+  // miR-Target), which stays in the CSV download. Older backends send no
+  // Ensembl ids, so keep their id column.
+  const showEnsembl = hasEnsemblIds(data?.genes);
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
   const toolRows = data
@@ -222,12 +227,12 @@ export function CompareTable({ jobId, wt, variant }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="Filter by gene label, name or ID…"
+          placeholder="Filter by gene label, Ensembl ID or gene name…"
           value={filterInput}
           onValueChange={handleFilterChange}
           size="sm"
           variant="bordered"
-          className="w-64"
+          className="w-full sm:w-96"
           classNames={{ inputWrapper: "bg-white" }}
           isClearable
           onClear={() => handleFilterChange("")}
@@ -271,6 +276,12 @@ export function CompareTable({ jobId, wt, variant }: Props) {
                       <SortIcon active={sortBy === "gene_label"} order={order} />
                     </button>
                   </th>
+                  {showEnsembl ? (
+                    <>
+                      <th className="px-4 py-3 text-left">ENSEMBL GENE</th>
+                      <th className="px-4 py-3 text-left">ENSEMBL TRANSCRIPT</th>
+                    </>
+                  ) : null}
                   <th className="px-4 py-3 text-left">
                     <button
                       type="button"
@@ -295,13 +306,13 @@ export function CompareTable({ jobId, wt, variant }: Props) {
                     </button>
                   </th>
                   <th className="px-4 py-3 text-left">GENE NAME</th>
-                  <th className="px-4 py-3 text-left">GENE ID</th>
+                  {showEnsembl ? null : <th className="px-4 py-3 text-left">GENE ID</th>}
                 </tr>
               </thead>
               <tbody>
                 {!data?.genes.length ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
+                    <td colSpan={8 + (showEnsembl ? 1 : 0)} className="px-4 py-8 text-center text-zinc-500">
                       No targets match the current filter.
                     </td>
                   </tr>
@@ -311,7 +322,13 @@ export function CompareTable({ jobId, wt, variant }: Props) {
                       <td className="px-4 py-2.5 text-right text-xs text-zinc-400">
                         {offset + idx + 1}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-zinc-800">{row.gene_label}</td>
+                      <GeneLabelCell value={row.gene_label} />
+                      {showEnsembl ? (
+                        <>
+                          <EnsemblIdCell value={row.ensembl_gene} />
+                          <EnsemblIdCell value={row.ensembl_transcript} />
+                        </>
+                      ) : null}
                       <td className="px-4 py-2.5">
                         <span
                           title={STATUS_HINT[row.status]}
@@ -328,7 +345,9 @@ export function CompareTable({ jobId, wt, variant }: Props) {
                       </td>
                       <td className="px-4 py-2.5 font-mono text-xs text-zinc-600">{row.delta}</td>
                       <td className="px-4 py-2.5 text-zinc-700">{row.gene_name}</td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">{row.gene_id}</td>
+                      {showEnsembl ? null : (
+                        <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">{row.gene_id}</td>
+                      )}
                     </tr>
                   ))
                 )}

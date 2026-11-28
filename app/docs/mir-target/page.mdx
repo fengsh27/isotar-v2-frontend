@@ -92,9 +92,16 @@ The **Predicted Targets** tab has three parts:
   shrinks as you ask for more agreement.
 - **Tool overlap (UpSet):** each column is one combination of tools, and its bar counts the targets
   predicted by exactly that combination. The largest 20 combinations are shown.
-- **The target table:** one row per target transcript, with its gene symbol, the tools that predict
-  it, the gene name and RefSeq ID. It is sorted by the number of tools; click a column header to
-  re-sort, and use the filter box to search by gene symbol, gene name or tool.
+- **The target table:** one row per target transcript, with its gene label, Ensembl gene and
+  transcript IDs, the tools that predict it, and the gene name. It is sorted by the number of
+  tools; click a column header to re-sort, and use the filter box to search by gene label, Ensembl
+  ID, gene name or tool.
+
+  isoTar predicts on RefSeq 3′ UTRs, so a gene can appear once per RefSeq isoform, with the same
+  label and Ensembl gene ID. The Ensembl transcript ID is shown only when it is the exact equivalent
+  of that RefSeq transcript, and is "—" otherwise (common outside human, mouse, fly and worm). The
+  RefSeq ID of every row is in the downloaded `predictions.csv` (`gene_id`), next to
+  `ensembl_gene` and `ensembl_transcript`.
 
 **Download Results (.zip)** saves every prediction for offline analysis.
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input, Spinner } from "@heroui/react";
 
+import { EnsemblIdCell, GeneLabelCell, hasEnsemblIds } from "@/components/job/TargetIds";
 import { getJobResults } from "@/lib/api";
 import type { JobResultsResponse, SequenceInfo, VennData } from "@/lib/types";
 
@@ -102,6 +103,10 @@ export function PredictedGenesTable({ jobId, sequences = null, onVennData, onSeq
   }
 
   const total = data?.total ?? 0;
+  // Ensembl gene / transcript columns replace the raw target id (RefSeq for
+  // miR-Target), which stays in the CSV download. Older backends send no
+  // Ensembl ids, so keep their id column.
+  const showEnsembl = hasEnsemblIds(data?.genes);
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
 
@@ -110,12 +115,12 @@ export function PredictedGenesTable({ jobId, sequences = null, onVennData, onSeq
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="Filter by gene label, tool, or gene name…"
+          placeholder="Filter by gene label, Ensembl ID, gene name or tool…"
           value={filterInput}
           onValueChange={handleFilterChange}
           size="sm"
           variant="bordered"
-          className="w-64"
+          className="w-full sm:w-96"
           classNames={{ inputWrapper: "bg-white" }}
           isClearable
           onClear={() => handleFilterChange("")}
@@ -174,6 +179,12 @@ export function PredictedGenesTable({ jobId, sequences = null, onVennData, onSeq
                       <SortIcon active={sortBy === "gene_label"} order={order} />
                     </button>
                   </th>
+                  {showEnsembl ? (
+                    <>
+                      <th className="px-4 py-3 text-left">ENSEMBL GENE</th>
+                      <th className="px-4 py-3 text-left">ENSEMBL TRANSCRIPT</th>
+                    </>
+                  ) : null}
                   <th className="px-4 py-3 text-left">
                     <button
                       type="button"
@@ -185,13 +196,13 @@ export function PredictedGenesTable({ jobId, sequences = null, onVennData, onSeq
                     </button>
                   </th>
                   <th className="px-4 py-3 text-left">GENE NAME</th>
-                  <th className="px-4 py-3 text-left">GENE ID</th>
+                  {showEnsembl ? null : <th className="px-4 py-3 text-left">GENE ID</th>}
                 </tr>
               </thead>
               <tbody>
                 {!data?.genes.length ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
+                    <td colSpan={5 + (showEnsembl ? 1 : 0)} className="px-4 py-8 text-center text-zinc-500">
                       No genes match the current filter.
                     </td>
                   </tr>
@@ -201,7 +212,13 @@ export function PredictedGenesTable({ jobId, sequences = null, onVennData, onSeq
                       <td className="px-4 py-2.5 text-right text-xs text-zinc-400">
                         {offset + idx + 1}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-zinc-800">{gene.gene_label}</td>
+                      <GeneLabelCell value={gene.gene_label} />
+                      {showEnsembl ? (
+                        <>
+                          <EnsemblIdCell value={gene.ensembl_gene} />
+                          <EnsemblIdCell value={gene.ensembl_transcript} />
+                        </>
+                      ) : null}
                       <td className="px-4 py-2.5">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="mr-1 text-xs text-zinc-400">({gene.tool_count})</span>
@@ -216,7 +233,9 @@ export function PredictedGenesTable({ jobId, sequences = null, onVennData, onSeq
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-zinc-700">{gene.gene_name}</td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">{gene.gene_id}</td>
+                      {showEnsembl ? null : (
+                        <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">{gene.gene_id}</td>
+                      )}
                     </tr>
                   ))
                 )}

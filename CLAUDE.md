@@ -440,8 +440,19 @@ workflow-dependent:
 * otherwise → a **Predicted Targets** tab (`PredictedGenesTable`, plus
   `VennDiagram` / `UpSetPlot` / `ConsensusHistogram` when the backend returns
   `venn`), and an **Enrichment** tab only when `enrichmentOrganismForGenome`
-  resolves and the workflow is not `mir-lncrna` (lncRNA targets have no
-  gene-symbol identity). A job with a shift or modification ran the wild type
+  resolves and the workflow is not `mir-lncrna` (Enrichr's gene-set libraries
+  are protein-coding genes).
+
+  The target table (and `CompareTable`) shows gene label, Ensembl gene and
+  Ensembl transcript, and **hides `gene_id`** — the RefSeq record the tools
+  scored for `mir-target` — which stays in the CSV download. Rows come from
+  the backend's result schema 3 (`ensembl_gene` / `ensembl_transcript`,
+  `'|'`-joined when several, `null` when none; a `mir-lncrna` row has the
+  transcript as `gene_id` and a symbol only when Ensembl gives one). Against
+  an older backend the fields are absent and the tables fall back to the
+  `gene_id` column (`hasEnsemblIds`, `components/job/TargetIds.tsx`). Since
+  one gene has several RefSeq isoforms, repeated labels are expected rows,
+  not duplicates. A job with a shift or modification ran the wild type
   and each variant as separate records, which the backend never merges: the
   `/result` response lists them in `sequences` and shows the WT records by
   default. When there is more than one, `JobResults` mounts `SequenceSelector`

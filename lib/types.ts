@@ -264,8 +264,16 @@ export interface JobResultsData {
 
 export interface GeneRecord {
   gene_id: string;
-  gene_label: string;
-  gene_name: string;
+  /** Gene symbol; null for a target without one (many lncRNAs). */
+  gene_label: string | null;
+  gene_name: string | null;
+  /** Ensembl gene / transcript id of the target (result schema 3; absent from
+   *  older backends). For miR-Target `gene_id` is the RefSeq record the tools
+   *  scored and these are its mapped ids, '|'-joined when several, null when
+   *  none; for miR-LncRNA `gene_id` is itself the Ensembl transcript. Only the
+   *  CSV download shows the RefSeq id. */
+  ensembl_gene?: string | null;
+  ensembl_transcript?: string | null;
   tool_count: number;
   tools: string[];
 }
@@ -351,8 +359,11 @@ export type CompareStatus = "changed" | "lost" | "gained" | "shared";
  *  by those tools, not evidence of no binding. */
 export interface CompareRow {
   gene_id: string;
-  gene_label: string;
-  gene_name: string;
+  gene_label: string | null;
+  gene_name: string | null;
+  /** See `GeneRecord`. */
+  ensembl_gene?: string | null;
+  ensembl_transcript?: string | null;
   status: CompareStatus;
   wt_tools: string[];
   variant_tools: string[];
