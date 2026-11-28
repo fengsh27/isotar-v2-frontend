@@ -53,9 +53,21 @@ by several independent tools are usually more reliable, so choose several.
 The defaults suit almost every job. Two optional cards:
 
 - **Advanced settings:** CPU cores and other run settings.
-- **Select Target:** restrict the predictions to genes you name, as gene symbols (`TP53`) or RefSeq
-  IDs (`NM_000546`), one per line or comma-separated. isoTar checks each name against the species'
-  reference and marks any it cannot find ("not found"); fix or remove those to continue.
+- **Select Target:** restrict the predictions to genes you name, one per line or comma-separated
+  (up to 100). Each entry is one of:
+  - a **gene label**, such as `TP53` (case does not matter), which selects every RefSeq isoform of
+    the gene;
+  - an **Ensembl gene ID**, such as `ENSG00000141510` (FlyBase `FBgn…` for fly, WormBase `WBGene…`
+    for worm), which selects the same isoforms as the gene label;
+  - an **Ensembl transcript ID**, such as `ENST00000269305` (FlyBase `FBtr…`; for worm a transcript
+    name such as `F52B5.5a.1`), which selects only the RefSeq transcript that is its exact
+    equivalent. A transcript with no exact RefSeq equivalent is rejected rather than widened to its
+    gene; enter the gene instead.
+
+  A version suffix (`ENSG00000141510.18`) is ignored. RefSeq IDs (`NM_000546`) are not accepted
+  here. **Check Validation** looks each entry up in the species' reference and shows what it
+  matched, for example *Ensembl gene → TP53 · 25 RefSeq isoforms*, or why it was not found; fix or
+  remove the entries it cannot find to continue.
 
 <Callout tone="note" title="Leave Select Target empty for enrichment">
   Enrichment tests the job's predicted genes against whole gene-set databases. It needs a

@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 import { evaluateOperationState, type ModificationInput } from "@/lib/operation";
 import { MAX_CORES_PER_JOB, SPECIES_OPTIONS } from "@/lib/constants";
-import { parseTargets } from "@/lib/targets";
+import { findMalformedTargets, parseTargets } from "@/lib/targets";
 import type { CreateJobPayload, WizardConfig, WorkflowType } from "@/lib/types";
 
 interface WizardState {
@@ -231,6 +231,14 @@ export const useWizardStore = create<WizardState>((set, get) => ({
 
     if (state.workflow === "mir-target" || state.workflow === "mir-lncrna") {
       const targets = parseTargets(state.targetGeneIds);
+      // miR-Target takes gene symbols and Ensembl / FlyBase / WormBase ids
+      // only; a RefSeq accession or other malformed entry blocks submission.
+      if (
+        state.workflow === "mir-target" &&
+        findMalformedTargets(state.targetGeneIds, "gene").length > 0
+      ) {
+        return null;
+      }
       if (targets.length) payload.targets = targets;
     }
 
