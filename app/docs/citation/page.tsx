@@ -1,6 +1,6 @@
 export default function CitationPage() {
   return (
-    <section className="surface-panel-strong rounded-2xl p-6 fade-rise">
+    <section>
       <h1 className="text-2xl font-semibold text-zinc-900">Citation Details</h1>
       <p className="mt-3 text-sm text-zinc-700">
         Please cite isoTar using the following reference:

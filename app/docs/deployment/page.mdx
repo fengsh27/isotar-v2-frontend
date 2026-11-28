@@ -1,0 +1,159 @@
+import { Callout } from "@/components/docs/Callout";
+
+export const metadata = { title: "Run isoTar locally · isoTar docs" };
+
+# Run isoTar locally
+
+isoTar is published as two Docker images, so your lab can run the complete tool on its own server
+instead of this public site. Everything in these docs applies unchanged to a local installation.
+
+| Image | What it is | Download |
+| --- | --- | --- |
+| [`frankfeng78/isotar-v2`](https://hub.docker.com/r/frankfeng78/isotar-v2) | The prediction tools, the job queue and the REST API | about 2.6 GB |
+| [`frankfeng78/isotar-v2-frontend`](https://hub.docker.com/r/frankfeng78/isotar-v2-frontend) | This web interface | about 110 MB |
+
+**Why run it locally?**
+
+- **More CPU per job.** This server caps a job at 8 cores and runs four jobs at a time. On your
+  own machine you set both limits, and the slow tools (RNAhybrid above all) scale with the cores
+  you give them.
+- **Your data stays with you.** Jobs, miRNA variants, target lists and results are written to a
+  directory on your server and nowhere else.
+- **No shared queue.** Your jobs never wait behind anyone else's.
+
+You can run the **full website** on your server, or the **backend only** and drive it from the
+command line or a script. Both produce the same results and the same downloadable files.
+
+## Requirements
+
+- A Linux server (or macOS for small tests) with Docker and Docker Compose 2.24 or newer. Run
+  `docker compose version` to check.
+- CPU: 8 cores run one job at this server's speed; the defaults assume 32 cores can be given to
+  isoTar. No GPU is needed.
+- Disk: about 3 GB for the images, plus the jobs you keep. Put the data directory on a volume with
+  tens of gigabytes free.
+- Internet access only to download the images and, if you enable them, for the optional PubMed and
+  model-review features.
+
+## The full website
+
+1. Create a directory and download the two configuration files:
+
+   ```bash
+   mkdir isotar && cd isotar
+   curl -LO https://raw.githubusercontent.com/fengsh27/isoTar-v2/main/docker-compose.yml
+   curl -LO https://raw.githubusercontent.com/fengsh27/isoTar-v2/main/.env.template
+   cp .env.template .env
+   ```
+
+2. Start isoTar:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   The first start downloads the images; later starts take seconds.
+
+3. Open `http://localhost:9501`, or use your server's name instead of `localhost`.
+
+Everything isoTar writes goes to `./isotar-data` next to the compose file, one folder per job. Set
+`ISOTAR_DATA_DIR` in `.env` to use another path. `docker compose down` stops isoTar and keeps the
+jobs; `docker compose up -d` brings them back.
+
+## Backend only
+
+The backend image exposes the REST API this website uses, on port 8080:
+
+```bash
+docker run -d --name isotar \
+  -p 8080:8080 \
+  -e ISOTAR_DEFAULT_CORES=16 -e ISOTAR_MAX_CORES_PER_JOB=16 -e ISOTAR_MAX_CONCURRENT_JOBS=2 \
+  -v "$PWD/isotar-data":/opt/out \
+  frankfeng78/isotar-v2:0.3.35
+```
+
+Submit a job, wait for it, and download the results:
+
+```bash
+API=http://localhost:8080/api/v1
+
+JOB=$(curl -s -X POST $API/jobs -H 'Content-Type: application/json' -d '{
+  "workflow": "mir-target",
+  "genome": "hg38",
+  "mirna_id": "hsa-miR-21-5p",
+  "tools": ["miRanda", "RNAhybrid", "PITA", "Targetscan"],
+  "cores": 16
+}' | python3 -c 'import sys, json; print(json.load(sys.stdin)["job_id"])')
+
+curl -s $API/jobs/$JOB | python3 -m json.tool          # status: queued, running, succeeded, failed
+curl -s "$API/jobs/$JOB/result?number=20"              # parsed results, most-agreed targets first
+curl -o isotar_$JOB.zip $API/jobs/$JOB/result/download  # raw outputs, result.db, predictions.csv
+```
+
+Shifts, modifications, target lists, the miR-LncRNA workflow and the miR-Network workflow are all
+submitted through the same endpoint. The complete API reference is in the
+[backend README](https://github.com/fengsh27/isoTar-v2#rest-api).
+
+## Tuning for your machine
+
+Set these in `.env` (full website) or with `-e` (backend only):
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `ISOTAR_DEFAULT_CORES` | 8 | Cores a job gets when the submission does not say |
+| `ISOTAR_MAX_CORES_PER_JOB` | 8 | Largest `cores` value a submission may ask for |
+| `ISOTAR_MAX_CONCURRENT_JOBS` | 4 | Jobs running at the same time; further jobs queue |
+| `ISOTAR_CPU_LIMIT` | 32 | Hard ceiling on the container (full website only) |
+
+Keep jobs × cores at or below the CPU limit. On a 64-core server shared with other work, for
+example: 16 cores per job, 3 concurrent jobs, limit 48.
+
+RNAhybrid takes most of a job's time and benefits most from extra cores. If runtime matters more
+than coverage, leave it out of the tool selection, or for network jobs choose
+**Scan only my pairs** so the tools skip the genome-wide scan.
+
+## Optional features and credentials
+
+<Callout title="Predictions need no account or key">
+  Only two features of miR-Network call external services, and both are switched on by putting
+  **your own** credentials in `.env`. The images contain no credentials of ours.
+</Callout>
+
+| Feature | Variables | Where to get them | When blank |
+| --- | --- | --- | --- |
+| Literature verification (PubMed search per predicted triplet) | `NCBI_API_KEY`, `NCBI_EMAIL` | Free, from your NCBI account settings under "API Key Management" | The **Verify against literature** button is not shown |
+| Model review of the candidate papers | `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `ISOTAR_VERIFICATION_MODEL` | Your institution's Anthropic-compatible gateway (LiteLLM) and a key for it | The review option is disabled; PubMed verification still works |
+
+PubMed answers and model verdicts are cached in the data directory, so repeating a verification
+costs nothing.
+
+## Upgrading
+
+New versions are listed in the backend
+[changelog](https://github.com/fengsh27/isoTar-v2/blob/main/CHANGELOG.md). Download the current
+`docker-compose.yml`, which pins a matching pair of image versions, then:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Jobs and results are kept across upgrades.
+
+## Troubleshooting
+
+- **The page loads but every submission fails.** The web interface cannot reach the backend. Run
+  `docker compose ps`; both services must be running. The backend needs about 30 seconds after a
+  cold start.
+- **`address already in use` on start.** Port 9501 is taken. Set `ISOTAR_PORT` in `.env`.
+- **A job is rejected with "cores".** The request asked for more cores than
+  `ISOTAR_MAX_CORES_PER_JOB`. Raise the limit or lower the request.
+- **Jobs stay queued.** The concurrent-job limit is reached. Wait, or raise
+  `ISOTAR_MAX_CONCURRENT_JOBS`.
+- **TargetScan is refused for my species.** It has datasets for human, mouse, fly, zebrafish and
+  worm only. Submit without it for other species.
+- **The Verify against literature button is missing.** `NCBI_API_KEY` is not set, or `.env` is not
+  next to the compose file. After editing `.env`, run `docker compose up -d` again.
+
+More detail, including where each file is stored, is in the backend repository's
+[INSTALL.md](https://github.com/fengsh27/isoTar-v2/blob/main/INSTALL.md).

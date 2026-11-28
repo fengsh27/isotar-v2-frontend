@@ -73,18 +73,23 @@ backend runs it as a background task, and the page polls for its result.
 
 ### Running with Docker Compose
 
-`docker-compose.yml` starts the backend image and this frontend on one
-network. The literature verification feature on the job page needs secrets
-that the backend reads from a `.env` file next to the compose file:
+`docker-compose.yml` here is the developer variant: it builds the frontend from
+this checkout and runs the published backend image. The user-facing compose
+file, which pulls both images, lives in the
+[isoTar-v2 repository](https://github.com/fengsh27/isoTar-v2) together with
+[INSTALL.md](https://github.com/fengsh27/isoTar-v2/blob/main/INSTALL.md); the
+same guide is published in the app under `/docs/deployment`.
 
 ```bash
-cp .env.template .env   # NCBI_API_KEY, NCBI_EMAIL, ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN
-docker compose up -d
+cp .env.template .env           # optional: credentials and host settings
+docker compose up -d --build
 ```
 
 `.env` is git-ignored and is passed only to the `backend` service. Without it
 the stack still runs; the job page then hides the "Verify against literature"
 button (no NCBI key) or disables the model-review option (no gateway token).
+The image tags in the compose file must be bumped by hand when a release pair
+changes.
 
 ## Project structure
 

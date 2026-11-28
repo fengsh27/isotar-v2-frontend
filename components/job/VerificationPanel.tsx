@@ -436,7 +436,8 @@ function ResultView({
           if (!isSamePaperHit(r)) return false;
           break;
         case "reviewed":
-          if (!verdicts.has(tripletId(r))) return false;
+          // A not_read row records a failed attempt, not a reading.
+          if (!(verdicts.get(tripletId(r)) ?? []).some((v) => v.verdict !== "not_read")) return false;
           break;
       }
       if (!q) return true;
@@ -988,8 +989,8 @@ function TripletDetail({
         </p>
         {verdicts.length === 0 ? (
           <p className="text-zinc-500">
-            This triplet was not read by the model (not requested, or it did not qualify for the
-            reading queue).
+            This triplet was not read by the model (not requested, it did not qualify for the
+            reading queue, or it was beyond the per-job paper budget).
           </p>
         ) : (
           <ul className="space-y-3">

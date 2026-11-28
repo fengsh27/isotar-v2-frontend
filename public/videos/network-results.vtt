@@ -1,0 +1,29 @@
+WEBVTT
+
+1
+00:00:04.539 --> 00:00:11.335
+The network shows only the pairs the miRNA bridges: genes, the miRNA and lncRNAs.
+
+2
+00:00:11.335 --> 00:00:15.751
+Edge thickness shows how many prediction tools agree.
+
+3
+00:00:15.751 --> 00:00:23.458
+Each bridged pair gets a ceRNA score from your correlations and the tool agreement on both sides.
+
+4
+00:00:23.458 --> 00:00:30.626
+The formula is shown under the table. A pair's score is always the wild type's.
+
+5
+00:00:30.626 --> 00:00:45.842
+Raise Min. ceRNA score to hide weaker pairs; the graph and table stay in step.
+
+6
+00:00:45.842 --> 00:00:50.655
+Download the predictions for your pairs' targets as a zip.
+
+7
+00:00:50.655 --> 00:00:54.159
+For human jobs, check each gene–miRNA–lncRNA axis against PubMed.

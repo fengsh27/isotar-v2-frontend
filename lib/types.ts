@@ -629,7 +629,10 @@ export type VerdictValue =
   | "co_mention"
   | "look_alike"
   | "editorial_notice"
-  | "not_accessible";
+  | "not_accessible"
+  /** Written by the review script, not the model: the paper could not be
+   *  fetched or the model call failed; `note` carries the reason. */
+  | "not_read";
 
 export interface VerificationVerdict {
   /** Triplet id (rank) the verdict belongs to; compare via `String()`. */
