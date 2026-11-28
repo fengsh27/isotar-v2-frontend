@@ -422,7 +422,13 @@ LLMs must not mutate or reinterpret results client-side.
 ### How the job page renders them
 
 `JobStatus` polls `GET /api/v1/jobs/<id>` until a terminal status
-(`succeeded` / `failed` / `killed`), then mounts `JobResults`. What it shows is
+(`succeeded` / `failed` / `killed`), then mounts `JobResults`. A succeeded job
+may carry `warnings` (`JobWarning[]`), shown as alerts above the results —
+`variant_not_applied` marks an older job whose requested shift/modification
+never ran (the backend once skipped a mismatched base silently), so its
+results are wild type; `targetscan_wrong_species` marks a non-human job whose
+TargetScan ran on human data (before per-species datasets), so its TargetScan
+targets are human genes. Never hide or soften these. What it shows is
 workflow-dependent:
 
 * `mir-network` → `NetworkPanel` / `NetworkGraph` (Cytoscape + klay) only, no
