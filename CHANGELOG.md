@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.2.15](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.14...v0.2.15) (2026-11-28)
+
+
+### Features
+
+* **job:** title the TargetScan wrong-species warning ([8f54e99](https://github.com/fengsh27/isotar-v2-frontend/commit/8f54e991d612b4889831152c303cf5710a024feb))
+* **targets:** accept gene labels and Ensembl ids in miR-Target Select Target ([49596bd](https://github.com/fengsh27/isotar-v2-frontend/commit/49596bded826380acdd55d9ca305070be71f57fc))
+
+
+### Bug Fixes
+
+* **job:** warn when a job's requested variant never ran ([8608863](https://github.com/fengsh27/isotar-v2-frontend/commit/86088638b3618bb742e37f0884a557e8d962ec25))
+
 ### [0.2.14](https://github.com/fengsh27/isotar-v2-frontend/compare/v0.2.13...v0.2.14) (2026-11-22)
 
 
